@@ -99,6 +99,13 @@ export const dict = {
   add: { en: "Add", sw: "Ongeza" },
   qty: { en: "Qty", sw: "Idadi" },
   loading: { en: "Loading...", sw: "Inapakia..." },
+  // Landing Page
+  builtForTanzania: { en: "Built for Tanzania", sw: "Imejengwa kwa ajili ya Tanzania" },
+  runShopConfidence: { en: "Run your shop with", sw: "Endesha duka lako kwa" },
+  confidence: { en: "confidence", sw: "ujasiri" },
+  landingDescription: { en: "MauzoChap is the modern point of sale and business management platform for retail, pharmacies, restaurants, and wholesalers — sales, inventory, customers and reports in one place.", sw: "MauzoChap ni mfumo wa kisasa wa mauzo na usimamizi wa biashara kwa maduka, famasi, migahawa, na wauzaji wa jumla — mauzo, stoo, wateja na ripoti sehemu moja." },
+  getStartedFree: { en: "Get started — free", sw: "Anza sasa — bure" },
+  seeFeatures: { en: "See features", sw: "Tazama huduma zetu" },
 } as const;
 
 export type DictKey = keyof typeof dict;

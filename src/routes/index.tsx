@@ -21,6 +21,7 @@ export const Route = createFileRoute("/")({
 function Landing() {
   const { user, loading } = useAuth();
   const [lang, setLang] = useLang();
+  const t = useT();
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -86,37 +87,35 @@ function Landing() {
           <div className="mx-auto w-full px-6 py-20 lg:py-28 md:px-12">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
               <div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success" /> Built for Tanzania
+                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-success" /> {t("builtForTanzania")}
                 </span>
-                <h1 className="mt-5 text-5xl font-bold tracking-tight lg:text-6xl">
-                  Run your shop with{" "}
+                <h1 className="mt-6 text-6xl font-bold tracking-tight lg:text-7xl">
+                  {t("runShopConfidence")}{" "}
                   <span
                     className="bg-clip-text text-transparent"
                     style={{ backgroundImage: "var(--gradient-primary)" }}
                   >
-                    confidence
+                    {t("confidence")}
                   </span>
                   .
                 </h1>
-                <p className="mt-5 max-w-lg text-lg text-muted-foreground">
-                  MauzoChap is the modern point of sale and business management platform for retail,
-                  pharmacies, restaurants, and wholesalers — sales, inventory, customers and reports
-                  in one place.
+                <p className="mt-6 max-w-2xl text-xl text-muted-foreground leading-relaxed">
+                  {t("landingDescription")}
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link
                     to="/auth"
-                    className="rounded-lg px-5 py-3 text-sm font-medium text-primary-foreground shadow-[var(--shadow-elevated)]"
+                    className="rounded-lg px-6 py-4 text-base font-medium text-primary-foreground shadow-[var(--shadow-elevated)]"
                     style={{ background: "var(--gradient-primary)" }}
                   >
-                    Get started — free
+                    {t("getStartedFree")}
                   </Link>
                   <a
                     href="#features"
-                    className="rounded-lg border border-border bg-card px-5 py-3 text-sm font-medium hover:bg-accent"
+                    className="rounded-lg border border-border bg-card px-6 py-4 text-base font-medium hover:bg-accent"
                   >
-                    See features
+                    {t("seeFeatures")}
                   </a>
                 </div>
               </div>
