@@ -9,28 +9,138 @@ import {
   LogOut,
   Languages,
   Wallet,
+  Truck,
+  ClipboardList,
+  UserCog,
+  Settings,
+  ShieldAlert,
+  CreditCard,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/use-auth";
 import { useLang, useT } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+
+function Blocker({ title, message, icon: Icon, action }: { title: string, message: string, icon: any, action?: React.ReactNode }) {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const handleSignOut = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  };
+  return (
+    <div className="flex min-h-screen bg-background items-center justify-center p-4">
+      <div className="max-w-md w-full bg-card rounded-xl border border-border p-8 text-center space-y-6 shadow-sm">
+        <div className="mx-auto h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+          <Icon className="h-6 w-6 text-destructive" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold">{title}</h2>
+          <p className="text-muted-foreground mt-2">{message}</p>
+        </div>
+        {action}
+        <div className="pt-4 border-t border-border">
+          <Button variant="ghost" onClick={handleSignOut} className="w-full">
+            <LogOut className="h-4 w-4 mr-2" /> Sign Out
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT();
   const [lang, setLang] = useLang();
-  const { user, roles } = useAuth();
+  const { user, roles, business, isSuperAdmin, isAdmin, isManager, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const nav = [
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-sm"></div>
+          <p className="text-muted-foreground font-medium animate-pulse">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // SaaS Logic Bypass for super admins
+  if (!isSuperAdmin && business && location.pathname !== "/setup-billing") {
+    if (business.account_status === "pending") {
+      return (
+        <Blocker
+          title="Account Pending"
+          message="Your account is currently pending verification. Please set up billing to continue."
+          icon={ShieldAlert}
+          action={
+            <Button className="w-full" onClick={() => navigate({ to: "/setup-billing" })}>
+              Set up Billing
+            </Button>
+          }
+        />
+      );
+    }
+    if (business.account_status === "suspended") {
+      return (
+        <Blocker
+          title="Account Suspended"
+          message="Your account has been suspended. Please contact support."
+          icon={ShieldAlert}
+        />
+      );
+    }
+    if (business.account_status === "rejected") {
+      return (
+        <Blocker
+          title="Account Rejected"
+          message="Your application to use MauzoChap was rejected."
+          icon={ShieldAlert}
+        />
+      );
+    }
+    // Check expiry
+    if (business.expiry_date && new Date(business.expiry_date) < new Date()) {
+      return (
+        <Blocker
+          title="Subscription Expired"
+          message="Your subscription has expired. Please renew your package to continue using MauzoChap."
+          icon={CreditCard}
+          action={
+            <Button className="w-full" onClick={() => navigate({ to: "/setup-billing" })}>
+              Renew Subscription
+            </Button>
+          }
+        />
+      );
+    }
+  }
+
+  const nav = isSuperAdmin ? [
+    { to: "/super-admin", icon: ShieldAlert, label: "Super Admin" },
+    { to: "/dashboard", icon: LayoutDashboard, label: t("dashboard") },
+  ] : [
     { to: "/dashboard", icon: LayoutDashboard, label: t("dashboard") },
     { to: "/pos", icon: ShoppingCart, label: t("pos") },
     { to: "/products", icon: Boxes, label: t("products") },
+    { to: "/inventory", icon: ClipboardList, label: t("inventory") },
     { to: "/sales", icon: Receipt, label: t("sales") },
     { to: "/customers", icon: Users, label: t("customers") },
-    { to: "/expenses", icon: Wallet, label: t("expenses") },
-    { to: "/reports", icon: BarChart3, label: t("reports") },
+    { to: "/suppliers", icon: Truck, label: t("suppliers") },
+    ...(isManager ? [
+      { to: "/expenses", icon: Wallet, label: t("expenses") },
+      { to: "/reports", icon: BarChart3, label: t("reports") },
+    ] : []),
+    ...(isAdmin ? [
+      { to: "/users", icon: UserCog, label: t("users") },
+    ] : []),
+    { to: "/settings", icon: Settings, label: t("settings") },
   ];
 
   const handleSignOut = async () => {
@@ -42,17 +152,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground">
-        <div className="px-6 py-5 border-b border-sidebar-border">
+      <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm">
+        <div className="px-6 py-5 border-b border-sidebar-border flex flex-col gap-1">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-bold shadow-md">
               M
             </div>
-            <span className="text-lg font-semibold">MauzoChap</span>
+            <span className="text-lg font-bold tracking-tight">MauzoChap</span>
           </Link>
+          {business && !isSuperAdmin && (
+            <span className="text-xs text-sidebar-foreground/60 font-medium px-1 truncate">
+              {business.business_name}
+            </span>
+          )}
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {nav.map((item) => {
             const active = location.pathname.startsWith(item.to);
             return (
@@ -61,7 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 to={item.to}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 }`}
               >
@@ -72,18 +187,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t border-sidebar-border p-4 space-y-3">
-          <div className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</div>
+        <div className="border-t border-sidebar-border p-4 space-y-3 bg-sidebar/50">
+          <div className="text-xs text-sidebar-foreground/80 truncate font-medium">{user?.email}</div>
           <div className="flex flex-wrap gap-1">
             {roles.map((r) => (
-              <span key={r} className="rounded-full bg-sidebar-accent px-2 py-0.5 text-[10px] uppercase tracking-wider">
+              <span
+                key={r}
+                className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-primary/20"
+              >
                 {r}
               </span>
             ))}
           </div>
           <button
             onClick={() => setLang(lang === "en" ? "sw" : "en")}
-            className="flex w-full items-center gap-2 rounded-md border border-sidebar-border px-3 py-2 text-sm hover:bg-sidebar-accent/50"
+            className="flex w-full items-center gap-2 rounded-md border border-sidebar-border px-3 py-2 text-sm hover:bg-sidebar-accent transition-colors"
           >
             <Languages className="h-4 w-4" />
             {lang === "en" ? "English" : "Kiswahili"}
@@ -91,7 +209,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <button
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
           >
             <LogOut className="h-4 w-4" />
             {t("signOut")}
@@ -100,31 +218,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-sidebar text-sidebar-foreground px-4 py-3">
+      <div className="lg:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-sidebar text-sidebar-foreground px-4 py-3 border-b border-sidebar-border shadow-sm">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground font-bold text-sm">M</div>
-          <span className="font-semibold">MauzoChap</span>
+          <div className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
+            M
+          </div>
+          <span className="font-semibold tracking-tight">MauzoChap</span>
         </Link>
-        <button onClick={() => setLang(lang === "en" ? "sw" : "en")} className="text-xs uppercase tracking-wider">
+        <button
+          onClick={() => setLang(lang === "en" ? "sw" : "en")}
+          className="text-xs font-bold uppercase tracking-wider bg-sidebar-accent px-2 py-1 rounded"
+        >
           {lang}
         </button>
       </div>
 
-      <main className="flex-1 lg:ml-0 pt-14 lg:pt-0">
+      <main className="flex-1 lg:ml-0 pt-14 lg:pt-0 bg-muted/20">
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
         {/* Mobile bottom nav */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 grid grid-cols-5 gap-1 border-t border-border bg-card p-2 z-40">
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 grid grid-cols-5 gap-1 border-t border-border bg-card p-2 z-40 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           {nav.slice(0, 5).map((item) => {
             const active = location.pathname.startsWith(item.to);
             return (
-              <Link key={item.to} to={item.to} className={`flex flex-col items-center gap-0.5 py-1 text-[10px] rounded-md ${active ? "text-primary" : "text-muted-foreground"}`}>
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex flex-col items-center justify-center gap-1 py-1 text-[10px] rounded-md transition-colors ${active ? "text-primary font-medium" : "text-muted-foreground"}`}
+              >
                 <item.icon className="h-5 w-5" />
-                {item.label}
+                <span className="truncate w-full text-center px-1">{item.label}</span>
               </Link>
             );
           })}
         </nav>
-        <div className="lg:hidden h-16" />
+        <div className="lg:hidden h-20" />
       </main>
     </div>
   );

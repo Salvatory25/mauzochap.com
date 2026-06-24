@@ -34,6 +34,10 @@ export const dict = {
   pos: { en: "New Sale", sw: "Mauzo Mapya" },
   sales: { en: "Sales", sw: "Mauzo" },
   customers: { en: "Customers", sw: "Wateja" },
+  suppliers: { en: "Suppliers", sw: "Wabunifu/Wasambazaji" },
+  inventory: { en: "Inventory", sw: "Ghala/Stoo" },
+  users: { en: "Users", sw: "Watumiaji" },
+  settings: { en: "Settings", sw: "Mipangilio" },
   reports: { en: "Reports", sw: "Ripoti" },
   expenses: { en: "Expenses", sw: "Matumizi" },
   signIn: { en: "Sign in", sw: "Ingia" },
@@ -78,6 +82,8 @@ export const dict = {
   // Customers
   addCustomer: { en: "Add Customer", sw: "Ongeza Mteja" },
   phone: { en: "Phone", sw: "Simu" },
+  receivePayment: { en: "Receive Payment", sw: "Pokea Malipo" },
+  paymentAmount: { en: "Payment Amount", sw: "Kiasi cha Malipo" },
   // Reports
   todaySales: { en: "Today's sales", sw: "Mauzo ya leo" },
   weekSales: { en: "This week", sw: "Wiki hii" },

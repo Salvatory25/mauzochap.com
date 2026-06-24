@@ -62,9 +62,9 @@ function Landing() {
                   .
                 </h1>
                 <p className="mt-5 max-w-lg text-lg text-muted-foreground">
-                  MauzoChap is the modern point of sale and business management platform for
-                  retail, pharmacies, restaurants, and wholesalers — sales, inventory, customers
-                  and reports in one place.
+                  MauzoChap is the modern point of sale and business management platform for retail,
+                  pharmacies, restaurants, and wholesalers — sales, inventory, customers and reports
+                  in one place.
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link
@@ -89,19 +89,14 @@ function Landing() {
                     <span>Live</span>
                   </div>
                   <div className="mt-2 text-4xl font-bold">TZS 1,284,500</div>
-                  <div className="mt-1 text-sm text-sidebar-foreground/60">
-                    +18% vs yesterday
-                  </div>
+                  <div className="mt-1 text-sm text-sidebar-foreground/60">+18% vs yesterday</div>
                   <div className="mt-6 grid grid-cols-3 gap-3 text-sm">
                     {[
                       { l: "Orders", v: "47" },
                       { l: "Avg ticket", v: "27,330" },
                       { l: "Low stock", v: "3" },
                     ].map((x) => (
-                      <div
-                        key={x.l}
-                        className="rounded-lg bg-sidebar-accent/60 p-3"
-                      >
+                      <div key={x.l} className="rounded-lg bg-sidebar-accent/60 p-3">
                         <div className="text-xs text-sidebar-foreground/60">{x.l}</div>
                         <div className="mt-1 font-semibold">{x.v}</div>
                       </div>
@@ -120,12 +115,36 @@ function Landing() {
           </p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Store, title: "Lightning POS", desc: "Sell in seconds with barcode and search." },
-              { icon: Boxes, title: "Smart inventory", desc: "Stock levels, low-stock alerts, movements." },
-              { icon: Users, title: "Customer profiles", desc: "Purchase history, credit, loyalty points." },
-              { icon: Receipt, title: "Receipts your way", desc: "80mm thermal or A4 PDF receipts." },
-              { icon: BarChart3, title: "Real-time reports", desc: "Daily, weekly, monthly performance." },
-              { icon: ShieldCheck, title: "Role-based access", desc: "Admin, Manager, Cashier — secure." },
+              {
+                icon: Store,
+                title: "Lightning POS",
+                desc: "Sell in seconds with barcode and search.",
+              },
+              {
+                icon: Boxes,
+                title: "Smart inventory",
+                desc: "Stock levels, low-stock alerts, movements.",
+              },
+              {
+                icon: Users,
+                title: "Customer profiles",
+                desc: "Purchase history, credit, loyalty points.",
+              },
+              {
+                icon: Receipt,
+                title: "Receipts your way",
+                desc: "80mm thermal or A4 PDF receipts.",
+              },
+              {
+                icon: BarChart3,
+                title: "Real-time reports",
+                desc: "Daily, weekly, monthly performance.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Role-based access",
+                desc: "Admin, Manager, Cashier — secure.",
+              },
             ].map((f) => (
               <div
                 key={f.title}

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useT, formatTZS, formatDate } from "@/lib/i18n";
+import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,23 +14,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Banknote, Search, User } from "lucide-react";
+import { Trash2, Search, Truck, Banknote, User, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/lib/use-auth";
 import { z } from "zod";
 
-const customerSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+const supplierSchema = z.object({
+  name: z.string().min(1, "Supplier name is required"),
   phone: z.string().optional().nullable(),
   email: z.string().email("Invalid email").optional().or(z.literal("")).nullable(),
   address: z.string().optional().nullable(),
+  balance: z.number().min(0, "Balance cannot be negative"),
 });
 
-export const Route = createFileRoute("/_authenticated/customers")({
-  component: CustomersPage,
+export const Route = createFileRoute("/_authenticated/suppliers")({
+  component: SuppliersPage,
 });
 
-type Customer = {
+type Supplier = {
   id: string;
   name: string;
   phone: string | null;
@@ -38,70 +39,72 @@ type Customer = {
   balance: number;
 };
 
-function CustomersPage() {
+function SuppliersPage() {
   const t = useT();
   const qc = useQueryClient();
   const { isManager } = useAuth();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Customer | null>(null);
-  
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [payingCustomer, setPayingCustomer] = useState<Customer | null>(null);
+  const [editing, setEditing] = useState<Supplier | null>(null);
 
-  const [profileCustomer, setProfileCustomer] = useState<Customer | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [payingSupplier, setPayingSupplier] = useState<Supplier | null>(null);
+  
+  const [profileSupplier, setProfileSupplier] = useState<Supplier | null>(null);
 
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 50;
 
-  const { data: customers = [], isLoading } = useQuery({
-    queryKey: ["customers"],
+  const { data: suppliers = [], isLoading } = useQuery({
+    queryKey: ["suppliers"],
     queryFn: async () => {
-      const { data } = await supabase.from("customers").select("*").order("name");
-      return (data ?? []) as Customer[];
+      const { data, error } = await supabase.from("suppliers").select("*").order("name");
+      if (error) throw error;
+      return data as Supplier[];
     },
   });
 
-  const filtered = customers.filter(
-    (c) =>
-      (c.name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (c.phone ?? "").includes(search) ||
-      (c.email ?? "").toLowerCase().includes(search.toLowerCase()),
+  const filtered = suppliers.filter(
+    (s) =>
+      (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.phone ?? "").includes(search) ||
+      (s.email ?? "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this customer?")) return;
-    const { error } = await supabase.from("customers").delete().eq("id", id);
+    if (!confirm("Are you sure you want to delete this supplier?")) return;
+    const { error } = await supabase.from("suppliers").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Deleted");
-    qc.invalidateQueries({ queryKey: ["customers"] });
+    toast.success("Deleted successfully");
+    qc.invalidateQueries({ queryKey: ["suppliers"] });
   };
 
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t("customers")}</h1>
-          <p className="text-sm text-muted-foreground">{customers.length} customers</p>
+          <h1 className="text-3xl font-bold">{t("suppliers")}</h1>
+          <p className="text-sm text-muted-foreground">{suppliers.length} suppliers registered</p>
         </div>
-        <Dialog
-          open={open}
-          onOpenChange={(o) => {
-            setOpen(o);
-            if (!o) setEditing(null);
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditing(null)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t("addCustomer")}
-            </Button>
-          </DialogTrigger>
-          <CustomerDialog editing={editing} onClose={() => setOpen(false)} />
-        </Dialog>
+        {isManager && (
+          <Dialog
+            open={open}
+            onOpenChange={(o) => {
+              setOpen(o);
+              if (!o) setEditing(null);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button onClick={() => setEditing(null)}>
+                <Plus className="h-4 w-4 mr-2" /> Add Supplier
+              </Button>
+            </DialogTrigger>
+            <SupplierDialog editing={editing} onClose={() => setOpen(false)} />
+          </Dialog>
+        )}
       </div>
 
       <div className="relative">
@@ -112,7 +115,7 @@ function CustomersPage() {
             setSearch(e.target.value);
             setPage(1);
           }}
-          placeholder={t("search") + " customers..."}
+          placeholder="Search suppliers..."
           className="pl-10 max-w-md"
         />
       </div>
@@ -121,9 +124,8 @@ function CustomersPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">{t("phone")}</th>
-              <th className="px-4 py-3 text-left">{t("email")}</th>
+              <th className="px-4 py-3 text-left">Supplier</th>
+              <th className="px-4 py-3 text-left">Contact</th>
               <th className="px-4 py-3 text-right">Balance</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -131,29 +133,33 @@ function CustomersPage() {
           <tbody className="divide-y divide-border">
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={4} className="px-4 py-10 text-center text-muted-foreground">
                   {t("loading")}
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={4} className="px-4 py-10 text-center text-muted-foreground">
                   {t("noData")}
                 </td>
               </tr>
             ) : (
-              paginated.map((c) => (
-                <tr key={c.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{c.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.email ?? "—"}</td>
+              paginated.map((s) => (
+                <tr key={s.id} className="hover:bg-muted/30">
+                  <td className="px-4 py-3">
+                    <div className="font-medium flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      {s.name}
+                    </div>
+                    {s.address && <div className="text-xs text-muted-foreground">{s.address}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    <div>{s.phone || "—"}</div>
+                    <div className="text-xs">{s.email}</div>
+                  </td>
                   <td className="px-4 py-3 text-right">
-                    <span
-                      className={
-                        c.balance > 0 ? "text-warning font-semibold" : ""
-                      }
-                    >
-                      {formatTZS(Number(c.balance))}
+                    <span className={s.balance > 0 ? "text-warning font-semibold" : ""}>
+                      {formatTZS(s.balance)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-1">
@@ -161,22 +167,22 @@ function CustomersPage() {
                       size="sm"
                       variant="ghost"
                       className="h-8 text-primary"
-                      onClick={() => setProfileCustomer(c)}
+                      onClick={() => setProfileSupplier(s)}
                     >
                       <User className="h-4 w-4 mr-2" /> Profile
                     </Button>
-                    {c.balance > 0 && (
+                    {isManager && s.balance > 0 && (
                       <Button
                         size="sm"
                         variant="outline"
                         className="h-8"
                         onClick={() => {
-                          setPayingCustomer(c);
+                          setPayingSupplier(s);
                           setPaymentOpen(true);
                         }}
                       >
                         <Banknote className="h-4 w-4 mr-2" />
-                        {t("receivePayment")}
+                        Pay Supplier
                       </Button>
                     )}
                     {isManager && (
@@ -186,18 +192,13 @@ function CustomersPage() {
                           variant="ghost"
                           className="h-8 w-8"
                           onClick={() => {
-                            setEditing(c);
+                            setEditing(s);
                             setOpen(true);
                           }}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => handleDelete(c.id)}
-                        >
+                        <Button size="icon" variant="ghost" onClick={() => handleDelete(s.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </>
@@ -225,24 +226,25 @@ function CustomersPage() {
       )}
 
       <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
-        <PaymentDialog customer={payingCustomer} onClose={() => setPaymentOpen(false)} />
+        <SupplierPaymentDialog supplier={payingSupplier} onClose={() => setPaymentOpen(false)} />
       </Dialog>
 
-      <Dialog open={!!profileCustomer} onOpenChange={(o) => !o && setProfileCustomer(null)}>
-        <CustomerProfileDialog customer={profileCustomer} onClose={() => setProfileCustomer(null)} />
+      <Dialog open={!!profileSupplier} onOpenChange={(o) => !o && setProfileSupplier(null)}>
+        <SupplierProfileDialog supplier={profileSupplier} onClose={() => setProfileSupplier(null)} />
       </Dialog>
     </div>
   );
 }
 
-function CustomerDialog({ editing, onClose }: { editing: Customer | null; onClose: () => void }) {
-  const t = useT();
+function SupplierDialog({ editing, onClose }: { editing: Supplier | null; onClose: () => void }) {
   const qc = useQueryClient();
+  const t = useT();
   const [form, setForm] = useState({
     name: editing?.name ?? "",
     phone: editing?.phone ?? "",
     email: editing?.email ?? "",
     address: editing?.address ?? "",
+    balance: editing?.balance ?? 0,
   });
   const [saving, setSaving] = useState(false);
 
@@ -251,24 +253,25 @@ function CustomerDialog({ editing, onClose }: { editing: Customer | null; onClos
     setSaving(true);
     try {
       const payload = {
-        name: form.name,
+        ...form,
         phone: form.phone || null,
         email: form.email || null,
         address: form.address || null,
+        balance: Number(form.balance),
       };
 
-      const parsed = customerSchema.safeParse(payload);
+      const parsed = supplierSchema.safeParse(payload);
       if (!parsed.success) {
         parsed.error.errors.forEach((err) => toast.error(err.message));
         return;
       }
 
       const { error } = editing
-        ? await supabase.from("customers").update(payload).eq("id", editing.id)
-        : await supabase.from("customers").insert(payload);
+        ? await supabase.from("suppliers" as any).update(payload).eq("id", editing.id)
+        : await supabase.from("suppliers" as any).insert(payload);
       if (error) throw error;
-      toast.success(editing ? "Customer updated" : "Customer added");
-      qc.invalidateQueries({ queryKey: ["customers"] });
+      toast.success(editing ? "Supplier updated" : "Supplier created");
+      qc.invalidateQueries({ queryKey: ["suppliers"] });
       onClose();
     } catch (err: unknown) {
       toast.error((err as Error).message);
@@ -280,28 +283,30 @@ function CustomerDialog({ editing, onClose }: { editing: Customer | null; onClos
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>{editing ? t("edit") : t("addCustomer")}</DialogTitle>
+        <DialogTitle>{editing ? "Edit Supplier" : "Add Supplier"}</DialogTitle>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-3">
         <div>
-          <Label>Name</Label>
+          <Label>Supplier Name</Label>
           <Input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
           />
         </div>
-        <div>
-          <Label>{t("phone")}</Label>
-          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        </div>
-        <div>
-          <Label>{t("email")}</Label>
-          <Input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Phone</Label>
+            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </div>
+          <div>
+            <Label>Email</Label>
+            <Input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </div>
         </div>
         <div>
           <Label>Address</Label>
@@ -309,6 +314,16 @@ function CustomerDialog({ editing, onClose }: { editing: Customer | null; onClos
             value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
           />
+        </div>
+        <div>
+          <Label>Initial Balance (TZS)</Label>
+          <Input
+            type="number"
+            value={form.balance}
+            onChange={(e) => setForm({ ...form, balance: Number(e.target.value) })}
+            disabled={!!editing}
+          />
+          {!!editing && <p className="text-xs text-muted-foreground mt-1">Balance is updated via purchases and payments.</p>}
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
@@ -323,32 +338,31 @@ function CustomerDialog({ editing, onClose }: { editing: Customer | null; onClos
   );
 }
 
-function PaymentDialog({ customer, onClose }: { customer: Customer | null; onClose: () => void }) {
-  const t = useT();
+function SupplierPaymentDialog({ supplier, onClose }: { supplier: Supplier | null; onClose: () => void }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [amount, setAmount] = useState<number | "">("");
-  const [method, setMethod] = useState<"cash" | "mobile_money" | "card" | "bank">("cash");
+  const [method, setMethod] = useState<"cash" | "mobile_money" | "bank">("bank");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  if (!customer) return null;
+  if (!supplier) return null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || amount <= 0) return toast.error("Invalid amount");
     setSaving(true);
     try {
-      const { error } = await supabase.from("customer_payments").insert({
-        customer_id: customer.id,
+      const { error } = await supabase.from("supplier_payments" as any).insert({
+        supplier_id: supplier.id,
         amount: Number(amount),
         payment_method: method,
         notes: notes || null,
-        received_by: user?.id,
+        paid_by: user?.id,
       });
       if (error) throw error;
       toast.success("Payment recorded successfully");
-      qc.invalidateQueries({ queryKey: ["customers"] });
+      qc.invalidateQueries({ queryKey: ["suppliers"] });
       onClose();
     } catch (err: unknown) {
       toast.error((err as Error).message);
@@ -360,24 +374,24 @@ function PaymentDialog({ customer, onClose }: { customer: Customer | null; onClo
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>{t("receivePayment")}</DialogTitle>
+        <DialogTitle>Pay Supplier</DialogTitle>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-lg bg-muted p-3 text-sm">
-          <div className="text-muted-foreground">Customer</div>
-          <div className="font-semibold">{customer.name}</div>
+          <div className="text-muted-foreground">Supplier</div>
+          <div className="font-semibold">{supplier.name}</div>
           <div className="flex justify-between mt-2 pt-2 border-t border-border">
-            <span>Outstanding Balance</span>
-            <span className="font-bold text-warning">{formatTZS(customer.balance)}</span>
+            <span>Outstanding Balance to Pay</span>
+            <span className="font-bold text-warning">{formatTZS(supplier.balance)}</span>
           </div>
         </div>
 
         <div>
-          <Label>{t("paymentAmount")} (TZS)</Label>
+          <Label>Amount to Pay (TZS)</Label>
           <Input
             type="number"
             step="0.01"
-            max={customer.balance}
+            max={supplier.balance}
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
             required
@@ -386,9 +400,9 @@ function PaymentDialog({ customer, onClose }: { customer: Customer | null; onClo
         </div>
 
         <div>
-          <Label>{t("paymentMethod")}</Label>
-          <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(["cash", "mobile_money", "card", "bank"] as const).map((m) => (
+          <Label>Payment Method</Label>
+          <div className="mt-1 grid grid-cols-3 gap-2">
+            {(["cash", "mobile_money", "bank"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
@@ -406,16 +420,14 @@ function PaymentDialog({ customer, onClose }: { customer: Customer | null; onClo
         </div>
 
         <div>
-          <Label>Notes (Optional)</Label>
-          <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Label>Reference / Notes (Optional)</Label>
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Bank Transfer Ref: TR123" />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {t("cancel")}
-          </Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
           <Button type="submit" disabled={saving}>
-            {saving ? "..." : t("save")}
+            {saving ? "..." : "Record Payment"}
           </Button>
         </div>
       </form>
@@ -423,59 +435,59 @@ function PaymentDialog({ customer, onClose }: { customer: Customer | null; onClo
   );
 }
 
-function CustomerProfileDialog({ customer, onClose }: { customer: Customer | null; onClose: () => void }) {
+function SupplierProfileDialog({ supplier, onClose }: { supplier: Supplier | null; onClose: () => void }) {
   const [tab, setTab] = useState<"purchases" | "payments">("purchases");
 
-  const { data: sales = [], isLoading: loadingSales } = useQuery({
-    queryKey: ["customer-sales", customer?.id],
-    enabled: !!customer,
+  const { data: purchases = [], isLoading: loadingPurchases } = useQuery({
+    queryKey: ["supplier-purchases", supplier?.id],
+    enabled: !!supplier,
     queryFn: async () => {
       const { data } = await supabase
-        .from("sales")
+        .from("purchases" as any)
         .select("*")
-        .eq("customer_id", customer!.id)
+        .eq("supplier_id", supplier!.id)
         .order("created_at", { ascending: false });
       return data ?? [];
     }
   });
 
   const { data: payments = [], isLoading: loadingPayments } = useQuery({
-    queryKey: ["customer-payments", customer?.id],
-    enabled: !!customer,
+    queryKey: ["supplier-payments", supplier?.id],
+    enabled: !!supplier,
     queryFn: async () => {
       const { data } = await supabase
-        .from("customer_payments")
+        .from("supplier_payments" as any)
         .select("*")
-        .eq("customer_id", customer!.id)
+        .eq("supplier_id", supplier!.id)
         .order("created_at", { ascending: false });
       return data ?? [];
     }
   });
 
-  if (!customer) return null;
+  if (!supplier) return null;
 
   return (
     <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
       <DialogHeader>
-        <DialogTitle>Customer Profile</DialogTitle>
+        <DialogTitle>Supplier Profile</DialogTitle>
       </DialogHeader>
       
       <div className="flex gap-4 p-4 rounded-xl border border-border bg-muted/20">
         <div className="h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold">
-          {customer.name.charAt(0).toUpperCase()}
+          <Truck className="h-8 w-8" />
         </div>
         <div className="flex-1">
-          <h2 className="text-xl font-bold">{customer.name}</h2>
+          <h2 className="text-xl font-bold">{supplier.name}</h2>
           <div className="text-sm text-muted-foreground flex gap-4 mt-1">
-            {customer.phone && <span>{customer.phone}</span>}
-            {customer.email && <span>{customer.email}</span>}
-            {customer.address && <span>{customer.address}</span>}
+            {supplier.phone && <span>{supplier.phone}</span>}
+            {supplier.email && <span>{supplier.email}</span>}
+            {supplier.address && <span>{supplier.address}</span>}
           </div>
         </div>
         <div className="text-right">
-          <div className="text-sm text-muted-foreground">Current Balance</div>
-          <div className={`text-2xl font-bold ${customer.balance > 0 ? "text-warning" : "text-success"}`}>
-            {formatTZS(customer.balance)}
+          <div className="text-sm text-muted-foreground">Outstanding Balance</div>
+          <div className={`text-2xl font-bold ${supplier.balance > 0 ? "text-warning" : "text-success"}`}>
+            {formatTZS(supplier.balance)}
           </div>
         </div>
       </div>
@@ -501,25 +513,23 @@ function CustomerProfileDialog({ customer, onClose }: { customer: Customer | nul
             <thead className="bg-muted/50 sticky top-0 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3 text-left">Receipt</th>
-                <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3 text-right">Paid</th>
-                <th className="px-4 py-3 text-right">Method</th>
+                <th className="px-4 py-3 text-left">Invoice No</th>
+                <th className="px-4 py-3 text-right">Total Amount</th>
+                <th className="px-4 py-3 text-right">Amount Paid</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {loadingSales ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center">Loading...</td></tr>
-              ) : sales.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No purchases found.</td></tr>
+              {loadingPurchases ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center">Loading...</td></tr>
+              ) : purchases.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No purchases found.</td></tr>
               ) : (
-                sales.map((s: any) => (
-                  <tr key={s.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(s.created_at)}</td>
-                    <td className="px-4 py-3 font-mono">{s.receipt_number}</td>
-                    <td className="px-4 py-3 text-right font-medium">{formatTZS(s.total)}</td>
-                    <td className="px-4 py-3 text-right text-success">{formatTZS(s.amount_paid)}</td>
-                    <td className="px-4 py-3 text-right capitalize">{s.payment_method}</td>
+                purchases.map((p: any) => (
+                  <tr key={p.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(p.created_at)}</td>
+                    <td className="px-4 py-3 font-mono">{p.invoice_number || '—'}</td>
+                    <td className="px-4 py-3 text-right font-medium">{formatTZS(p.total_amount)}</td>
+                    <td className="px-4 py-3 text-right text-success">{formatTZS(p.amount_paid)}</td>
                   </tr>
                 ))
               )}
@@ -534,7 +544,7 @@ function CustomerProfileDialog({ customer, onClose }: { customer: Customer | nul
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-right">Amount Paid</th>
                 <th className="px-4 py-3 text-right">Method</th>
-                <th className="px-4 py-3 text-left pl-8">Notes</th>
+                <th className="px-4 py-3 text-left pl-8">Notes/Ref</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
