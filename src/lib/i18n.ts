@@ -104,8 +104,22 @@ export const dict = {
   runShopConfidence: { en: "Run your shop with", sw: "Endesha duka lako kwa" },
   confidence: { en: "confidence", sw: "ujasiri" },
   landingDescription: { en: "MauzoChap is the modern point of sale and business management platform for retail, pharmacies, restaurants, and wholesalers — sales, inventory, customers and reports in one place.", sw: "MauzoChap ni mfumo wa kisasa wa mauzo na usimamizi wa biashara kwa maduka, famasi, migahawa, na wauzaji wa jumla — mauzo, stoo, wateja na ripoti sehemu moja." },
-  getStartedFree: { en: "Get started — free", sw: "Anza sasa — bure" },
-  seeFeatures: { en: "See features", sw: "Tazama huduma zetu" },
+  // Landing Page Features
+  featuresTitle: { en: "Everything your business needs", sw: "Kila kitu biashara yako inahitaji" },
+  featuresDesc: { en: "Replace notebooks and spreadsheets with one fast, simple system.", sw: "Acha kutumia madaftari; tumia mfumo mmoja wa haraka na rahisi." },
+  posTitle: { en: "Lightning POS", sw: "Mauzo ya Haraka (POS)" },
+  posDesc: { en: "Sell in seconds with barcode and search.", sw: "Fanya mauzo kwa sekunde kwa barcode na kutafuta jina." },
+  invTitle: { en: "Smart inventory", sw: "Usimamizi wa Stoo" },
+  invDesc: { en: "Stock levels, low-stock alerts, movements.", sw: "Idadi ya mzigo, taarifa za mzigo kuisha, mzunguko." },
+  custTitle: { en: "Customer profiles", sw: "Taarifa za Wateja" },
+  custDesc: { en: "Purchase history, credit, loyalty points.", sw: "Rekodi za mauzo, madeni, na pointi zao." },
+  recTitle: { en: "Receipts your way", sw: "Risiti Upendavyo" },
+  recDesc: { en: "80mm thermal or A4 PDF receipts.", sw: "Chapisha risiti za 80mm au PDF ya A4." },
+  repTitle: { en: "Real-time reports", sw: "Ripoti za Wakati Huo" },
+  repDesc: { en: "Daily, weekly, monthly performance.", sw: "Mwenendo wa mauzo kila siku, wiki, na mwezi." },
+  roleTitle: { en: "Role-based access", sw: "Nafasi za Kazi" },
+  roleDesc: { en: "Admin, Manager, Cashier — secure.", sw: "Admin, Meneja, Cashier — salama na uhakika." },
+  footerText: { en: "MauzoChap. Made for African businesses.", sw: "MauzoChap. Imetengenezwa kwa ajili ya biashara za Afrika." },
 } as const;
 
 export type DictKey = keyof typeof dict;

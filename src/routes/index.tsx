@@ -146,41 +146,41 @@ function Landing() {
         </section>
 
         <section id="features" className="mx-auto w-full px-6 py-20 md:px-12">
-          <h2 className="text-3xl font-bold">Everything your business needs</h2>
+          <h2 className="text-3xl font-bold">{t("featuresTitle")}</h2>
           <p className="mt-2 text-muted-foreground">
-            Replace notebooks and spreadsheets with one fast, simple system.
+            {t("featuresDesc")}
           </p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
                 icon: Store,
-                title: "Lightning POS",
-                desc: "Sell in seconds with barcode and search.",
+                title: t("posTitle"),
+                desc: t("posDesc"),
               },
               {
                 icon: Boxes,
-                title: "Smart inventory",
-                desc: "Stock levels, low-stock alerts, movements.",
+                title: t("invTitle"),
+                desc: t("invDesc"),
               },
               {
                 icon: Users,
-                title: "Customer profiles",
-                desc: "Purchase history, credit, loyalty points.",
+                title: t("custTitle"),
+                desc: t("custDesc"),
               },
               {
                 icon: Receipt,
-                title: "Receipts your way",
-                desc: "80mm thermal or A4 PDF receipts.",
+                title: t("recTitle"),
+                desc: t("recDesc"),
               },
               {
                 icon: BarChart3,
-                title: "Real-time reports",
-                desc: "Daily, weekly, monthly performance.",
+                title: t("repTitle"),
+                desc: t("repDesc"),
               },
               {
                 icon: ShieldCheck,
-                title: "Role-based access",
-                desc: "Admin, Manager, Cashier — secure.",
+                title: t("roleTitle"),
+                desc: t("roleDesc"),
               },
             ].map((f) => (
               <div
@@ -203,7 +203,7 @@ function Landing() {
 
       <footer className="border-t border-border py-8">
         <div className="mx-auto w-full px-6 text-sm text-muted-foreground md:px-12 flex flex-col md:flex-row items-center justify-between">
-          <span>© {new Date().getFullYear()} MauzoChap. Made for African businesses.</span>
+          <span>© {new Date().getFullYear()} {t("footerText")}</span>
         </div>
       </footer>
 
