@@ -28,6 +28,7 @@ function Dashboard() {
         todayRes, 
         weekRes, 
         monthRes, 
+        allTimeRes,
         productsRes, 
         lowStockRes, 
         customersRes, 
@@ -45,6 +46,11 @@ function Dashboard() {
         })(),
         (() => {
           let q = supabase.from("sales").select("total").gte("created_at", monthStart.toISOString()).eq("status", "completed");
+          if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
+          return q;
+        })(),
+        (() => {
+          let q = supabase.from("sales").select("total").eq("status", "completed");
           if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
           return q;
         })(),
@@ -94,6 +100,7 @@ function Dashboard() {
         today: sum(todayRes.data),
         week: sum(weekRes.data),
         month: monthTotal,
+        allTime: sum(allTimeRes.data),
         productCount: productsRes.count ?? 0,
         lowStock: lowStockRes.data ?? [],
         customerCount: customersRes.count ?? 0,
@@ -124,21 +131,21 @@ function Dashboard() {
 
   const cards = [
     {
-      label: t("todaySales"),
-      value: formatTZS(stats?.today ?? 0),
+      label: "Total Sales (All Time)",
+      value: formatTZS(stats?.allTime ?? 0),
       icon: TrendingUp,
       accent: "var(--gradient-primary)",
       primary: true
     },
+    { label: t("todaySales"), value: formatTZS(stats?.today ?? 0), icon: TrendingUp },
     { label: t("weekSales"), value: formatTZS(stats?.week ?? 0), icon: TrendingUp },
     { label: t("monthSales"), value: formatTZS(stats?.month ?? 0), icon: TrendingUp },
-    { label: "Pending Debts", value: formatTZS(stats?.pendingDebts ?? 0), icon: CreditCard, color: "text-warning" },
   ];
 
   const secondaryCards = [
+    { label: "Pending Debts", value: formatTZS(stats?.pendingDebts ?? 0), icon: CreditCard, color: "text-warning" },
     { label: t("totalProducts"), value: String(stats?.productCount ?? 0), icon: Boxes },
     { label: t("customers"), value: String(stats?.customerCount ?? 0), icon: Users },
-    { label: "Avg Order Value", value: formatTZS(stats?.avgOrderValue ?? 0), icon: Activity },
   ];
 
   return (

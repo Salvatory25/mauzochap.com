@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { FileDown, Calendar as CalendarIcon, DownloadCloud, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import domtoimage from "dom-to-image-more";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   component: ReportsPage,
@@ -16,8 +20,9 @@ type DateFilter = "today" | "week" | "month" | "all";
 
 function ReportsPage() {
   const t = useT();
-  const { branchId, isManager } = useAuth();
+  const { branchId, isManager, business } = useAuth();
   const [dateFilter, setDateFilter] = useState<DateFilter>("month");
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["reports", branchId, dateFilter],
@@ -35,7 +40,7 @@ function ReportsPage() {
 
       let salesQuery = supabase
         .from("sales")
-        .select("id, total, payment_method, created_at, status, profiles(full_name)")
+        .select("id, total, payment_method, created_at, status, cashier_id")
         .gte("created_at", startDate);
       if (branchId) {
         salesQuery = salesQuery.or(`branch_id.eq.${branchId},branch_id.is.null`);
@@ -65,13 +70,21 @@ function ReportsPage() {
         // Customers/Suppliers are global for now
         supabase.from("customers").select("name, phone, email, balance").gt("balance", 0),
         supabase.from("suppliers").select("name, phone, email, balance").gt("balance", 0),
+        supabase.from("profiles").select("id, full_name"),
       ]);
+      
+      if (results[0].error) console.error("Sales query error:", results[0].error);
+      if (results[1].error) console.error("Expenses query error:", results[1].error);
+      if (results[2].error) console.error("Products query error:", results[2].error);
 
       const salesData = (results[0].data ?? []).filter((s) => s.status === "completed");
       const expenses = results[1].data ?? [];
       const products = results[2].data ?? [];
       const customersData = results[3].data || [];
       const suppliersData = results[4].data || [];
+      const profilesData = results[5].data || [];
+      
+      const profileMap = new Map(profilesData.map((p) => [p.id, p.full_name]));
 
       // Fetch sale items for the matched sales to compute product performance
       let saleItems: any[] = [];
@@ -87,7 +100,7 @@ function ReportsPage() {
       // Compute User Performance
       const byUser: Record<string, { name: string, total: number, count: number }> = {};
       salesData.forEach(s => {
-        const name = (s.profiles as any)?.full_name || 'System / Admin';
+        const name = profileMap.get(s.cashier_id) || 'System / Admin';
         if (!byUser[name]) byUser[name] = { name, total: 0, count: 0 };
         byUser[name].total += Number(s.total);
         byUser[name].count += 1;
@@ -182,66 +195,185 @@ function ReportsPage() {
     return "All Time";
   };
 
-  const exportDebtCSV = () => {
+  const generateTabularPDF = (title: string, columns: string[], rows: any[][], summary?: string[]) => {
+    try {
+      const pdf = new jsPDF("p", "mm", "a4");
+      const businessName = business?.business_name || "MauzoChap System";
+      
+      // Header
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), 35, "F");
+      
+      pdf.setFontSize(20);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(`${businessName} - ${title}`, 14, 18);
+      
+      // Date & Time
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Date Range: ${getFilterLabel()}   |   Generated on: ${new Date().toLocaleString()}`, 14, 26);
+      
+      pdf.setDrawColor(226, 232, 240);
+      pdf.line(14, 30, pdf.internal.pageSize.getWidth() - 14, 30);
+      
+      autoTable(pdf, {
+        startY: 38,
+        head: [columns],
+        body: rows,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: 255 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        styles: { fontSize: 10, cellPadding: 4 },
+      });
+      
+      let finalY = (pdf as any).lastAutoTable.finalY || 40;
+      
+      // Add summary if provided
+      if (summary && summary.length > 0) {
+        finalY += 10;
+        pdf.setFontSize(11);
+        pdf.setTextColor(15, 23, 42);
+        summary.forEach((line, i) => {
+          pdf.text(line, 14, finalY + (i * 6));
+        });
+      }
+      
+      // Footer
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        pdf.setFontSize(8);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(`© ${new Date().getFullYear()} ${businessName}. All rights reserved. Powered by MauzoChap.`, 14, pageHeight - 10);
+        pdf.text(`Page ${i} of ${pageCount}`, pdf.internal.pageSize.getWidth() - 30, pageHeight - 10);
+      }
+      
+      pdf.save(`MauzoChap_${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success(`${title} downloaded successfully!`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      toast.error("Failed to generate PDF. Please try again.");
+    }
+  };
+
+  const exportDebtPDF = () => {
     if (!data) return;
-    let csv = "Type,Name,Phone,Email,Outstanding Balance (TZS)\n";
+    const columns = ["Type", "Name", "Phone", "Email", "Outstanding Balance (TZS)"];
+    const rows: any[][] = [];
     data.customers.forEach((c: any) => {
-      csv += `Customer (Owes Us),"${c.name}","${c.phone||""}","${c.email||""}",${c.balance}\n`;
+      rows.push(["Customer (Owes Us)", c.name, c.phone || "-", c.email || "-", formatTZS(c.balance)]);
     });
     data.suppliers.forEach((s: any) => {
-      csv += `Supplier (We Owe),"${s.name}","${s.phone||""}","${s.email||""}",${s.balance}\n`;
+      rows.push(["Supplier (We Owe)", s.name, s.phone || "-", s.email || "-", formatTZS(s.balance)]);
     });
-    downloadCSV(csv, "debt_report");
+    generateTabularPDF("Outstanding Debt Report", columns, rows);
   };
 
-  const exportSalesCSV = () => {
+  const exportSalesPDF = () => {
     if (!data) return;
-    let csv = `Date Range: ${getFilterLabel()}\n\n`;
-    csv += "Date,Sales Revenue (TZS)\n";
-    data.days.forEach(([d, val]) => {
-      csv += `${d},${val}\n`;
-    });
-    csv += `\nTOTAL SALES,${data.totalSales}\n`;
-    csv += `TOTAL EXPENSES,${data.totalExpenses}\n`;
-    csv += `NET PROFIT,${profit}\n`;
-    downloadCSV(csv, `sales_profit_report_${dateFilter}`);
+    const columns = ["Date", "Sales Revenue (TZS)"];
+    const rows = data.days.map(([d, val]) => [d, formatTZS(val)]);
+    const summary = [
+      `TOTAL SALES: ${formatTZS(data.totalSales)}`,
+      `TOTAL EXPENSES: ${formatTZS(data.totalExpenses)}`,
+      `NET PROFIT (ESTIMATE): ${formatTZS(profit)}`
+    ];
+    generateTabularPDF("Sales & Profit Report", columns, rows, summary);
   };
 
-  const exportProductsCSV = () => {
+  const exportProductsPDF = () => {
     if (!data) return;
-    let csv = `Date Range: ${getFilterLabel()}\n\n`;
-    csv += "Product,Quantity Sold,Total Revenue (TZS)\n";
-    data.topProducts.forEach(p => {
-      csv += `"${p.name}",${p.quantity},${p.revenue}\n`;
-    });
-    downloadCSV(csv, `product_performance_${dateFilter}`);
+    const columns = ["Product Name", "Quantity Sold", "Total Revenue (TZS)"];
+    const rows = data.topProducts.map(p => [p.name, p.quantity, formatTZS(p.revenue)]);
+    generateTabularPDF("Product Performance Report", columns, rows);
   };
 
-  const exportUsersCSV = () => {
+  const exportUsersPDF = () => {
     if (!data) return;
-    let csv = `Date Range: ${getFilterLabel()}\n\n`;
-    csv += "User/Cashier,Sales Count,Total Revenue Generated (TZS)\n";
-    data.topUsers.forEach(u => {
-      csv += `"${u.name}",${u.count},${u.total}\n`;
-    });
-    downloadCSV(csv, `user_performance_${dateFilter}`);
+    const columns = ["User/Cashier", "Sales Processed", "Total Revenue Generated (TZS)"];
+    const rows = data.topUsers.map(u => [u.name, u.count, formatTZS(u.total)]);
+    generateTabularPDF("Cashier Performance Report", columns, rows);
   };
 
-  const downloadCSV = (csv: string, filename: string) => {
-    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csv);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const exportToPDF = async () => {
+    const input = document.getElementById("report-content");
+    if (!input) return;
+    
+    setIsExportingPDF(true);
+    try {
+      // Small delay to ensure any charts or animations are settled
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const width = input.offsetWidth;
+      const height = input.offsetHeight;
+      
+      const imgData = await domtoimage.toPng(input, {
+        bgcolor: "#ffffff",
+        quality: 1.0,
+        width: width * 2, // Scale up for better quality
+        height: height * 2,
+        style: {
+          transform: 'scale(2)',
+          transformOrigin: 'top left'
+        }
+      });
+      
+      const pdf = new jsPDF("p", "mm", "a4");
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      // Calculate height maintaining aspect ratio
+      const pdfHeight = (height * pdfWidth) / width;
+      
+      // Add custom header/copyrights
+      const businessName = business?.business_name || "MauzoChap System";
+      
+      // Header Background
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(0, 0, pdfWidth, 42, "F");
+      
+      pdf.setFontSize(22);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(`${businessName} - Analytics Report`, 14, 20);
+      
+      pdf.setFontSize(11);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Date Range: ${getFilterLabel()}`, 14, 28);
+      pdf.text(`Generated on: ${new Date().toLocaleString()}`, 14, 34);
+      
+      // Draw a separator line
+      pdf.setDrawColor(226, 232, 240);
+      pdf.setLineWidth(0.5);
+      pdf.line(14, 42, pdfWidth - 14, 42);
+      
+      // Add the captured image (offset by header height)
+      pdf.addImage(imgData, "PNG", 0, 45, pdfWidth, pdfHeight);
+      
+      // Footer with Copyrights
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(0, pageHeight - 15, pdfWidth, 15, "F");
+      
+      pdf.setFontSize(9);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text(`© ${new Date().getFullYear()} ${businessName}. All rights reserved. Powered by MauzoChap.`, 14, pageHeight - 6);
+      
+      pdf.save(`MauzoChap_Report_${dateFilter}_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Visual Dashboard PDF downloaded successfully!");
+    } catch (error) {
+      console.error("Error generating PDF", error);
+      toast.error("Failed to generate Visual PDF. Please try again.");
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   if (isLoading || !data) return <div className="text-muted-foreground p-8 text-center">{t("loading")}</div>;
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" data-html2canvas-ignore>
         <div>
           <h1 className="text-3xl font-bold">{t("reports")} & Analytics</h1>
           <p className="text-sm text-muted-foreground">Comprehensive business performance insights</p>
@@ -265,21 +397,25 @@ function ReportsPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button>
-                <DownloadCloud className="mr-2 h-4 w-4" />
-                Export Reports
+              <Button disabled={isExportingPDF}>
+                <DownloadCloud className={`mr-2 h-4 w-4 ${isExportingPDF ? 'animate-bounce' : ''}`} />
+                {isExportingPDF ? "Generating PDF..." : "Export Reports"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={exportSalesCSV}>Download Sales & Profit Report</DropdownMenuItem>
-              <DropdownMenuItem onClick={exportProductsCSV}>Download Product Performance Report</DropdownMenuItem>
-              <DropdownMenuItem onClick={exportUsersCSV}>Download User Performance Report</DropdownMenuItem>
-              <DropdownMenuItem onClick={exportDebtCSV}>Download Outstanding Debt Report</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToPDF} className="font-medium text-primary">
+                Download Visual Dashboard PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportSalesPDF}>Download Sales & Profit PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportProductsPDF}>Download Product Performance PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportUsersPDF}>Download User Performance PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportDebtPDF}>Download Outstanding Debt PDF</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
+      <div id="report-content" className="space-y-6 bg-background rounded-xl p-2 sm:p-0">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { l: "Total Sales", v: formatTZS(data.totalSales), color: "" },
@@ -431,6 +567,7 @@ function ReportsPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

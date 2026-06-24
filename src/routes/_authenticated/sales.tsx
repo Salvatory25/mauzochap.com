@@ -25,7 +25,7 @@ function SalesPage() {
         .order("created_at", { ascending: false })
         .limit(1000);
       if (branchId) {
-        q = q.eq("branch_id", branchId);
+        q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
       }
       const { data, error } = await q;
       if (error) throw error;
