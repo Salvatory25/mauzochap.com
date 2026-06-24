@@ -164,7 +164,7 @@ function SetupBilling() {
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="bg-primary/10 text-primary p-4 rounded-lg text-sm mb-6">
-            <strong>Payment Instructions:</strong> Send exactly <strong>{PACKAGES.find(p => p.id === selectedPackage)?.price.toLocaleString()} TZS</strong> to Lipa Namba <strong>123456 (MauzoChap)</strong>.
+            <strong>Payment Instructions:</strong> Send exactly <strong>{PACKAGES.find(p => p.id === selectedPackage)?.price.toLocaleString()} TZS</strong> to Bank Account <strong>40310127484 - NMB</strong>.
           </div>
           
           <div className="space-y-3">

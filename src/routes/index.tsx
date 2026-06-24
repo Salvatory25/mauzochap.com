@@ -1,6 +1,8 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/use-auth";
-import { Store, BarChart3, Boxes, Users, Receipt, ShieldCheck } from "lucide-react";
+import { Store, BarChart3, Boxes, Users, Receipt, ShieldCheck, Sun, Moon, Languages, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,24 +20,60 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const { user, loading } = useAuth();
+  const [lang, setLang] = useLang();
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  const toggleTheme = () => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    } else {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    }
+    setIsDark(!isDark);
+  };
+
   if (!loading && user) return <Navigate to="/dashboard" />;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/60 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <div className="min-h-screen bg-background relative">
+      <header className="border-b border-border/60 backdrop-blur sticky top-0 z-50">
+        <div className="mx-auto flex w-full items-center justify-between px-6 py-4 md:px-12">
           <div className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">
               M
             </div>
             <span className="text-lg font-semibold tracking-tight">MauzoChap</span>
           </div>
-          <Link
-            to="/auth"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setLang(lang === "en" ? "sw" : "en")}
+              className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+              title="Change Language"
+            >
+              <Languages className="h-4 w-4" />
+              <span className="uppercase">{lang}</span>
+            </button>
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center h-9 w-9 rounded-full bg-muted/50 hover:bg-muted transition-colors"
+              title="Toggle Theme"
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <Link
+              to="/auth"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -45,7 +83,7 @@ function Landing() {
             className="pointer-events-none absolute inset-0 -z-10 opacity-60"
             style={{ background: "var(--gradient-subtle)" }}
           />
-          <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+          <div className="mx-auto w-full px-6 py-20 lg:py-28 md:px-12">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -108,7 +146,7 @@ function Landing() {
           </div>
         </section>
 
-        <section id="features" className="mx-auto max-w-6xl px-6 py-20">
+        <section id="features" className="mx-auto w-full px-6 py-20 md:px-12">
           <h2 className="text-3xl font-bold">Everything your business needs</h2>
           <p className="mt-2 text-muted-foreground">
             Replace notebooks and spreadsheets with one fast, simple system.
@@ -165,10 +203,21 @@ function Landing() {
       </main>
 
       <footer className="border-t border-border py-8">
-        <div className="mx-auto max-w-6xl px-6 text-sm text-muted-foreground">
-          © {new Date().getFullYear()} MauzoChap. Made for African businesses.
+        <div className="mx-auto w-full px-6 text-sm text-muted-foreground md:px-12 flex flex-col md:flex-row items-center justify-between">
+          <span>© {new Date().getFullYear()} MauzoChap. Made for African businesses.</span>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Icon */}
+      <a
+        href="https://wa.me/255627274168"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-110 transition-transform duration-300"
+        title="Chat with us on WhatsApp"
+      >
+        <MessageCircle className="h-7 w-7" />
+      </a>
     </div>
   );
 }
