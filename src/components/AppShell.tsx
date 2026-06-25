@@ -16,7 +16,15 @@ import {
   ShieldAlert,
   CreditCard,
   FileText,
+  MapPin,
+  ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/use-auth";
 import { useLang, useT } from "@/lib/i18n";
@@ -60,6 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user, roles, business, isSuperAdmin, isAdmin, isManager, loading, availableBranches, branchId, switchBranch } = useAuth();
 
   if (loading) {
     return (
@@ -141,6 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ] : []),
     ...(isAdmin ? [
       { to: "/users", icon: UserCog, label: t("users") },
+      { to: "/locations", icon: MapPin, label: "Locations" },
     ] : []),
     { to: "/settings", icon: Settings, label: t("settings") },
   ];
@@ -163,9 +173,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="text-lg font-bold tracking-tight">MauzoChap</span>
           </Link>
           {business && !isSuperAdmin && (
-            <span className="text-xs text-sidebar-foreground/60 font-medium px-1 truncate">
-              {business.business_name}
-            </span>
+            <div className="mt-2">
+              {isAdmin && availableBranches && availableBranches.length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-between px-2 py-1 h-auto font-normal text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-sidebar-border/50 bg-sidebar-accent/20">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <div className="flex flex-col items-start truncate">
+                          <span className="text-xs font-bold truncate w-full">{business.business_name}</span>
+                          <span className="text-[10px] text-muted-foreground truncate w-full">
+                            {availableBranches.find(b => b.id === branchId)?.name || 'Select Location'}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[220px]">
+                    {availableBranches.map((b) => (
+                      <DropdownMenuItem 
+                        key={b.id} 
+                        onClick={() => switchBranch(b.id)}
+                        className={b.id === branchId ? "bg-primary/10 font-bold" : ""}
+                      >
+                        {b.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex flex-col px-1">
+                  <span className="text-xs font-bold text-sidebar-foreground truncate">{business.business_name}</span>
+                  <span className="text-[10px] text-sidebar-foreground/60 truncate flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3 w-3" />
+                    {availableBranches?.find(b => b.id === branchId)?.name || 'Default Location'}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

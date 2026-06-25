@@ -32,6 +32,7 @@ function AuthPage() {
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const inviteId = params.get("invite");
   const inviteRole = params.get("role") || "cashier";
+  const inviteBranch = params.get("branch") || "";
 
   useEffect(() => {
     if (inviteId) {
@@ -68,6 +69,9 @@ function AuthPage() {
         if (inviteId) {
           signUpData.business_id = inviteId;
           signUpData.role = inviteRole;
+          if (inviteBranch) {
+            signUpData.branch_id = inviteBranch;
+          }
         } else {
           signUpData.business_name = businessName;
         }

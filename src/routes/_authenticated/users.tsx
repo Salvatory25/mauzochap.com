@@ -38,6 +38,8 @@ type Profile = {
   phone: string | null;
   role?: string;
   role_id?: string;
+  branch_id?: string | null;
+  branches?: { name: string } | null;
 };
 
 function UsersPage() {
@@ -61,7 +63,7 @@ function UsersPage() {
     queryKey: ["users-list"],
     enabled: isAdmin,
     queryFn: async () => {
-      const { data: profiles, error: pErr } = await supabase.from("profiles").select("*");
+      const { data: profiles, error: pErr } = await supabase.from("profiles").select("*, branches(name)");
       if (pErr) throw pErr;
 
       let combined = profiles as Profile[];
@@ -159,7 +161,7 @@ function UsersPage() {
           <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="px-4 py-3 text-left">User</th>
-              <th className="px-4 py-3 text-left">Business Name</th>
+              <th className="px-4 py-3 text-left">Branch</th>
               <th className="px-4 py-3 text-left">Role</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -188,7 +190,9 @@ function UsersPage() {
                     </div>
                     <div className="text-xs text-muted-foreground">{u.phone}</div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.business_name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {u.branches?.name || u.business_name}
+                  </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center rounded-full bg-sidebar-accent px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider">
                       {u.role || "—"}
@@ -204,7 +208,7 @@ function UsersPage() {
                             openDialog("edit-role", u);
                           }}
                         >
-                          Change Role
+                          Edit Access
                         </Button>
                         <Button
                           size="sm"
@@ -243,7 +247,9 @@ function UsersPage() {
 
 function RoleDialog({ editing, onClose }: { editing: Profile; onClose: () => void }) {
   const qc = useQueryClient();
+  const { availableBranches } = useAuth();
   const [role, setRole] = useState(editing.role || "cashier");
+  const [branchId, setBranchId] = useState(editing.branch_id || (availableBranches?.[0]?.id ?? ""));
   const [saving, setSaving] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -257,7 +263,13 @@ function RoleDialog({ editing, onClose }: { editing: Profile; onClose: () => voi
         const { error } = await supabase.from("user_roles").insert({ user_id: editing.id, role: role as any });
         if (error) throw error;
       }
-      toast.success("Role updated");
+      
+      // Update Branch
+      if (branchId) {
+        await supabase.from("profiles").update({ branch_id: branchId }).eq("id", editing.id);
+      }
+
+      toast.success("User access updated");
       qc.invalidateQueries({ queryKey: ["users-list"] });
       onClose();
     } catch (err: unknown) {
@@ -289,6 +301,22 @@ function RoleDialog({ editing, onClose }: { editing: Profile; onClose: () => voi
             <option value="admin">Administrator</option>
           </select>
         </div>
+        
+        {availableBranches && availableBranches.length > 0 && (
+          <div>
+            <Label>Assigned Branch</Label>
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {availableBranches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
@@ -305,10 +333,11 @@ function RoleDialog({ editing, onClose }: { editing: Profile; onClose: () => voi
 function InviteUserDialog({ onClose }: { onClose: () => void }) {
   const t = useT();
   const qc = useQueryClient();
-  const { business } = useAuth();
+  const { business, availableBranches } = useAuth();
   
   const [tab, setTab] = useState<"direct" | "link">("direct");
   const [role, setRole] = useState("cashier");
+  const [branchId, setBranchId] = useState(availableBranches?.[0]?.id || "");
   
   // Direct Registration states
   const [fullName, setFullName] = useState("");
@@ -322,7 +351,7 @@ function InviteUserDialog({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   
   const inviteUrl = business?.id 
-    ? `${window.location.origin}/auth?invite=${business.id}&role=${role}` 
+    ? `${window.location.origin}/auth?invite=${business.id}&role=${role}&branch=${branchId}` 
     : "";
 
   const handleCopy = () => {
@@ -367,6 +396,7 @@ function InviteUserDialog({ onClose }: { onClose: () => void }) {
             full_name: fullName,
             phone: phone,
             business_id: business.id,
+            branch_id: branchId || undefined,
             role: role
           }
         }
@@ -490,6 +520,22 @@ function InviteUserDialog({ onClose }: { onClose: () => void }) {
             </select>
           </div>
 
+          {availableBranches && availableBranches.length > 0 && (
+            <div className="space-y-1">
+              <Label htmlFor="branch">Assigned Branch</Label>
+              <select
+                id="branch"
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {availableBranches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="text-xs text-muted-foreground bg-muted/30 p-2.5 rounded-lg">
             ℹ️ The user will be created under your business immediately. If email confirmation is enabled in Supabase, they must confirm their email before logging in.
           </div>
@@ -518,6 +564,22 @@ function InviteUserDialog({ onClose }: { onClose: () => void }) {
               <option value="admin">Administrator</option>
             </select>
           </div>
+
+          {availableBranches && availableBranches.length > 0 && (
+            <div className="space-y-1">
+              <Label htmlFor="link_branch">Assigned Branch</Label>
+              <select
+                id="link_branch"
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {availableBranches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label>Invite Link</Label>

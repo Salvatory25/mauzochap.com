@@ -15,6 +15,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isManager: boolean;
   isSuperAdmin: boolean;
+  availableBranches: any[];
+  switchBranch: (branchId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [branchId, setBranchId] = useState<string | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
+  const [availableBranches, setAvailableBranches] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -66,13 +69,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profileRes.data) {
           setBranchId(profileRes.data.branch_id);
           if (profileRes.data.business_id) {
-            const { data: bData } = await supabase
-              .from("businesses")
-              .select("*")
-              .eq("id", profileRes.data.business_id)
-              .single();
-            if (mounted && bData) {
-              setBusiness(bData);
+            const [{ data: bData }, { data: branchesData }] = await Promise.all([
+              supabase.from("businesses").select("*").eq("id", profileRes.data.business_id).single(),
+              supabase.from("branches").select("id, name").eq("business_id", profileRes.data.business_id)
+            ]);
+            
+            if (mounted) {
+              if (bData) setBusiness(bData);
+              if (branchesData) setAvailableBranches(branchesData);
             }
           }
         }
@@ -99,6 +103,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const switchBranch = async (newBranchId: string) => {
+    if (!user) return;
+    setBranchId(newBranchId);
+    await supabase.from("profiles").update({ branch_id: newBranchId }).eq("id", user.id);
+    // Reload window so all cached queries are cleanly reset
+    window.location.reload();
+  };
+
   const isSuperAdmin = roles.includes("super_admin");
   const value = {
     user,
@@ -109,6 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin: roles.includes("admin") || roles.includes("owner") || isSuperAdmin,
     isManager: roles.includes("manager") || roles.includes("admin") || roles.includes("owner") || isSuperAdmin,
     isSuperAdmin,
+    availableBranches,
+    switchBranch
   };
 
   return React.createElement(AuthContext.Provider, { value }, children);
