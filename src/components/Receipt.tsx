@@ -20,6 +20,7 @@ type SaleData = {
   branch_id?: string | null;
   business_id?: string | null;
   cashier_id?: string | null;
+  status?: string;
 };
 
 // SVG Jagged edge component for realistic paper thermal receipt on screen
@@ -121,9 +122,11 @@ export function Receipt({ sale, onClose }: { sale: SaleData; onClose: () => void
       <div className="flex items-center justify-between flex-wrap gap-4 no-print">
         <div>
           <h1 className="text-2xl font-bold">
-            {t("receipt")} {sale.receipt_number}
+            {sale.status === "pending" ? "Proforma" : t("receipt")} {sale.receipt_number}
           </h1>
-          <p className="text-sm text-muted-foreground">Sale completed successfully.</p>
+          <p className="text-sm text-muted-foreground">
+            {sale.status === "pending" ? "Proforma invoice generated." : "Sale completed successfully."}
+          </p>
         </div>
         <div className="flex gap-2">
           <div className="rounded-lg border border-border p-1 bg-card flex">
@@ -174,6 +177,8 @@ function ThermalReceipt({
   locationName: string;
 }) {
   const isSplit = sale.notes?.startsWith("Split Payment:");
+  const isProforma = sale.status === "pending";
+  const docTitle = isProforma ? "PROFORMA INVOICE" : "RECEIPT";
   
   return (
     <div
@@ -183,7 +188,8 @@ function ThermalReceipt({
       <div className="text-center">
         <div className="font-bold text-base uppercase">{businessName}</div>
         <div className="text-[10px] uppercase">{locationName}</div>
-        <div className="text-[10px] mt-1">--------------------------------</div>
+        <div className="text-[10px] mt-1 font-bold">{docTitle}</div>
+        <div className="text-[10px]">--------------------------------</div>
       </div>
       <div className="my-2 text-[11px]">
         <div>Receipt: {sale.receipt_number}</div>
@@ -261,6 +267,8 @@ function A4Receipt({
   locationName: string;
 }) {
   const isSplit = sale.notes?.startsWith("Split Payment:");
+  const isProforma = sale.status === "pending";
+  const docTitle = isProforma ? "PROFORMA INVOICE" : (sale.amount_paid < sale.total || sale.payment_method === 'credit' ? "TAX INVOICE" : "INVOICE RECEIPT");
 
   return (
     <div
@@ -281,7 +289,7 @@ function A4Receipt({
           </div>
           <div className="text-right">
             <div className="text-xs font-semibold text-primary uppercase tracking-wider print:text-black">
-              Invoice Receipt
+              {docTitle}
             </div>
             <div className="text-2xl font-bold text-gray-800 mt-0.5">
               #{sale.receipt_number}

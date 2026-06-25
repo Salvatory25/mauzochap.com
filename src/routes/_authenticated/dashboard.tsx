@@ -129,7 +129,7 @@ function Dashboard() {
     },
   });
 
-  const cards = [
+  const cards: { label: string; value: string; icon: any; accent?: string; primary?: boolean; color?: string }[] = [
     {
       label: "Total Sales (All Time)",
       value: formatTZS(stats?.allTime ?? 0),

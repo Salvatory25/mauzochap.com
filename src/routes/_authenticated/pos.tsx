@@ -167,18 +167,23 @@ function POSPage() {
     }
   };
 
-  const completeSale = async () => {
+  const completeSale = async (isInvoice: boolean = false) => {
     if (cart.length === 0) return toast.error("Cart is empty");
     if (!user) return;
     setSubmitting(true);
     try {
-      const receiptNumber = `R${Date.now().toString().slice(-8)}`;
+      const receiptNumber = isInvoice 
+        ? `INV-${Date.now().toString().slice(-6)}` 
+        : `R${Date.now().toString().slice(-8)}`;
       
       let finalAmountPaid = 0;
       let finalMethod = paymentMethod;
       let notes = null;
 
-      if (isSplit) {
+      if (isInvoice) {
+        finalAmountPaid = 0;
+        finalMethod = "credit";
+      } else if (isSplit) {
         const a1 = Number(splitAmount1 || 0);
         const a2 = Number(splitAmount2 || 0);
         finalAmountPaid = a1 + a2;
@@ -188,6 +193,8 @@ function POSPage() {
       } else {
         finalAmountPaid = amountPaid === "" ? total : Number(amountPaid);
       }
+
+      const status = isInvoice ? "pending" : "completed";
 
       const { data: sale, error } = await supabase
         .from("sales")
@@ -202,7 +209,7 @@ function POSPage() {
           total,
           amount_paid: finalAmountPaid,
           payment_method: finalMethod,
-          status: "completed",
+          status,
           notes: notes
         })
         .select()
@@ -463,15 +470,23 @@ function POSPage() {
               onClick={holdSale}
               disabled={submitting || cart.length === 0}
               variant="outline"
-              className="w-1/3 h-11"
+              className="w-1/4 h-11 px-0"
             >
-              <Pause className="h-4 w-4 mr-2" />
+              <Pause className="h-4 w-4 mr-1" />
               Hold
             </Button>
             <Button
-              onClick={completeSale}
+              onClick={() => completeSale(true)}
               disabled={submitting || cart.length === 0}
-              className="w-2/3 h-11 text-base shadow-md"
+              variant="outline"
+              className="w-1/4 h-11 border-primary text-primary px-0"
+            >
+              Invoice
+            </Button>
+            <Button
+              onClick={() => completeSale(false)}
+              disabled={submitting || cart.length === 0}
+              className="w-2/4 h-11 text-base shadow-md px-2"
               style={{ background: "var(--gradient-primary)" }}
             >
               {submitting ? "..." : `${t("completeSale")}`}

@@ -104,6 +104,8 @@ export const dict = {
   runShopConfidence: { en: "Run your shop with", sw: "Endesha duka lako kwa" },
   confidence: { en: "confidence", sw: "ujasiri" },
   landingDescription: { en: "MauzoChap is the modern point of sale and business management platform for retail, pharmacies, restaurants, and wholesalers — sales, inventory, customers and reports in one place.", sw: "MauzoChap ni mfumo wa kisasa wa mauzo na usimamizi wa biashara kwa maduka, famasi, migahawa, na wauzaji wa jumla — mauzo, stoo, wateja na ripoti sehemu moja." },
+  getStartedFree: { en: "Get Started for Free", sw: "Anza Bure" },
+  seeFeatures: { en: "See Features", sw: "Ona Vipengele" },
   // Landing Page Features
   featuresTitle: { en: "Everything your business needs", sw: "Kila kitu biashara yako inahitaji" },
   featuresDesc: { en: "Replace notebooks and spreadsheets with one fast, simple system.", sw: "Acha kutumia madaftari; tumia mfumo mmoja wa haraka na rahisi." },

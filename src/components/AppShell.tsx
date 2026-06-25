@@ -15,6 +15,7 @@ import {
   Settings,
   ShieldAlert,
   CreditCard,
+  FileText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/use-auth";
@@ -131,6 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: "/products", icon: Boxes, label: t("products") },
     { to: "/inventory", icon: ClipboardList, label: t("inventory") },
     { to: "/sales", icon: Receipt, label: t("sales") },
+    { to: "/invoices", icon: FileText, label: "Invoices" },
     { to: "/customers", icon: Users, label: t("customers") },
     { to: "/suppliers", icon: Truck, label: t("suppliers") },
     ...(isManager ? [
