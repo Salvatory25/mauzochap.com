@@ -70,7 +70,8 @@ function POSPage() {
           branch_inventory!inner(stock_quantity)
         `)
         .eq("is_active", true)
-        .eq("branch_inventory.branch_id", branchId!);
+        .eq("branch_inventory.branch_id", branchId!)
+        .limit(5000);
         
       return (data ?? []).map((p: any) => ({
         ...p,
@@ -258,8 +259,10 @@ function POSPage() {
                 if (e.key === "Enter") {
                   const val = e.currentTarget.value.trim();
                   if (!val) return;
-                  // If Enter is pressed (typical for barcode scanners), auto-add exact barcode match
-                  const exactMatch = products.find(p => p.barcode === val || p.sku === val);
+                  const exactMatch = products.find(p => 
+                    (p.barcode || "").trim().toLowerCase() === val.toLowerCase() || 
+                    (p.sku || "").trim().toLowerCase() === val.toLowerCase()
+                  );
                   if (exactMatch) {
                     addToCart(exactMatch);
                     setSearch(""); // clear search to be ready for next scan
@@ -507,7 +510,11 @@ function POSPage() {
         open={scannerOpen} 
         onClose={() => setScannerOpen(false)} 
         onScan={(code) => {
-          const exactMatch = products.find(p => p.barcode === code || p.sku === code);
+          const val = code.trim();
+          const exactMatch = products.find(p => 
+            (p.barcode || "").trim().toLowerCase() === val.toLowerCase() || 
+            (p.sku || "").trim().toLowerCase() === val.toLowerCase()
+          );
           if (exactMatch) {
             addToCart(exactMatch);
             if (exactMatch.stock_quantity <= 0) {
