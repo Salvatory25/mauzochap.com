@@ -255,17 +255,21 @@ function POSPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && search.trim()) {
+                if (e.key === "Enter") {
+                  const val = e.currentTarget.value.trim();
+                  if (!val) return;
                   // If Enter is pressed (typical for barcode scanners), auto-add exact barcode match
-                  const exactMatch = products.find(p => p.barcode === search.trim() || p.sku === search.trim());
+                  const exactMatch = products.find(p => p.barcode === val || p.sku === val);
                   if (exactMatch) {
-                    if (exactMatch.stock_quantity > 0) {
-                      addToCart(exactMatch);
-                      setSearch(""); // clear search to be ready for next scan
-                      toast.success(`Added ${exactMatch.name}`);
+                    addToCart(exactMatch);
+                    setSearch(""); // clear search to be ready for next scan
+                    if (exactMatch.stock_quantity <= 0) {
+                      toast.warning(`Added ${exactMatch.name} (Stock was 0)`);
                     } else {
-                      toast.error("Item out of stock!");
+                      toast.success(`Added ${exactMatch.name}`);
                     }
+                  } else {
+                    toast.error(`No product found for barcode: ${val}`);
                   }
                 }
               }}
@@ -505,11 +509,11 @@ function POSPage() {
         onScan={(code) => {
           const exactMatch = products.find(p => p.barcode === code || p.sku === code);
           if (exactMatch) {
-            if (exactMatch.stock_quantity > 0) {
-              addToCart(exactMatch);
-              toast.success(`Added ${exactMatch.name}`);
+            addToCart(exactMatch);
+            if (exactMatch.stock_quantity <= 0) {
+              toast.warning(`Added ${exactMatch.name} (Stock was 0)`);
             } else {
-              toast.error("Item out of stock!");
+              toast.success(`Added ${exactMatch.name}`);
             }
           } else {
              toast.error(`No product found for barcode: ${code}`);
