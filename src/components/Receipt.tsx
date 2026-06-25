@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { useT, formatTZS, formatDate } from "@/lib/i18n";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Printer, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/use-auth";
 
 type SaleData = {
   id: string;
@@ -15,11 +17,104 @@ type SaleData = {
   notes: string | null;
   created_at: string;
   items: { id: string; name: string; qty: number; price: number }[];
+  branch_id?: string | null;
+  business_id?: string | null;
+  cashier_id?: string | null;
 };
+
+// SVG Jagged edge component for realistic paper thermal receipt on screen
+function JaggedEdge({ position }: { position: "top" | "bottom" }) {
+  return (
+    <div className={`w-[302px] overflow-hidden h-2.5 flex no-print select-none ${position === "top" ? "-mb-0.5" : "-mt-0.5"}`}>
+      <svg className="w-full h-full text-white fill-current drop-shadow-[0_-1px_1px_rgba(0,0,0,0.03)]" viewBox="0 0 100 10" preserveAspectRatio="none">
+        {position === "top" ? (
+          <polygon points="0,10 2.5,0 5,10 7.5,0 10,10 12.5,0 15,10 17.5,0 20,10 22.5,0 25,10 27.5,0 30,10 32.5,0 35,10 37.5,0 40,10 42.5,0 45,10 47.5,0 50,10 52.5,0 55,10 57.5,0 60,10 62.5,0 65,10 67.5,0 70,10 72.5,0 75,10 77.5,0 80,10 82.5,0 85,10 87.5,0 90,10 92.5,0 95,10 97.5,0 100,10" fill="white" />
+        ) : (
+          <polygon points="0,0 2.5,10 5,0 7.5,10 10,0 12.5,10 15,0 17.5,10 20,0 22.5,10 25,0 27.5,10 30,0 32.5,10 35,0 37.5,10 40,0 42.5,10 45,0 47.5,10 50,0 52.5,10 55,0 57.5,10 60,0 62.5,10 65,0 67.5,10 70,0 72.5,10 75,0 77.5,10 80,0 82.5,10 85,0 87.5,10 90,0 92.5,10 95,0 97.5,10 100,0" fill="white" />
+        )}
+      </svg>
+    </div>
+  );
+}
 
 export function Receipt({ sale, onClose }: { sale: SaleData; onClose: () => void }) {
   const t = useT();
   const [format, setFormat] = useState<"thermal" | "a4">("thermal");
+  const { business, branchId: userBranchId } = useAuth();
+  const [businessName, setBusinessName] = useState<string>("Silivia Cosmetics");
+  const [locationName, setLocationName] = useState<string>("Tanzania");
+
+  useEffect(() => {
+    async function loadReceiptHeader() {
+      let resolvedBizName = "";
+
+      // 1. Fetch business name from profiles first (where the user updates it in Settings)
+      const targetCashierId = sale.cashier_id;
+      if (targetCashierId) {
+        try {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("business_name")
+            .eq("id", targetCashierId)
+            .single();
+          if (profileData?.business_name) {
+            resolvedBizName = profileData.business_name;
+            setBusinessName(profileData.business_name);
+          }
+        } catch (e) {
+          console.error("Failed to load business_name from cashier profile:", e);
+        }
+      }
+
+      // 2. Fetch branch name & location
+      const targetBranchId = sale.branch_id || userBranchId;
+      if (targetBranchId) {
+        try {
+          const { data: branchData } = await supabase
+            .from("branches")
+            .select("name, location, business_id")
+            .eq("id", targetBranchId)
+            .single();
+
+          if (branchData) {
+            if (branchData.location) {
+              setLocationName(branchData.location);
+            } else if (branchData.name) {
+              setLocationName(branchData.name);
+            }
+            
+            // Fallback for business name if profile didn't have one
+            if (!resolvedBizName) {
+              if (branchData.business_id) {
+                const { data: bizData } = await supabase
+                  .from("businesses")
+                  .select("business_name")
+                  .eq("id", branchData.business_id)
+                  .single();
+                if (bizData?.business_name) {
+                  setBusinessName(bizData.business_name);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load receipt branch info:", e);
+        }
+      }
+    }
+
+    if (business?.business_name) {
+      setBusinessName(business.business_name);
+    }
+    loadReceiptHeader();
+  }, [sale.branch_id, sale.cashier_id, userBranchId, business]);
+
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    document.title = `${businessName} - Receipt ${sale.receipt_number}`;
+    window.print();
+    document.title = originalTitle;
+  };
 
   return (
     <div className="space-y-6">
@@ -34,18 +129,22 @@ export function Receipt({ sale, onClose }: { sale: SaleData; onClose: () => void
           <div className="rounded-lg border border-border p-1 bg-card flex">
             <button
               onClick={() => setFormat("thermal")}
-              className={`px-3 py-1.5 text-xs rounded-md ${format === "thermal" ? "bg-primary text-primary-foreground" : ""}`}
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                format === "thermal" ? "bg-primary text-primary-foreground" : "hover:text-foreground/80"
+              }`}
             >
               {t("thermal")}
             </button>
             <button
               onClick={() => setFormat("a4")}
-              className={`px-3 py-1.5 text-xs rounded-md ${format === "a4" ? "bg-primary text-primary-foreground" : ""}`}
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                format === "a4" ? "bg-primary text-primary-foreground" : "hover:text-foreground/80"
+              }`}
             >
               {t("a4")}
             </button>
           </div>
-          <Button onClick={() => window.print()}>
+          <Button onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" /> {t("print")}
           </Button>
           <Button variant="ghost" onClick={onClose}>
@@ -55,13 +154,25 @@ export function Receipt({ sale, onClose }: { sale: SaleData; onClose: () => void
       </div>
 
       <div className="flex justify-center">
-        {format === "thermal" ? <ThermalReceipt sale={sale} /> : <A4Receipt sale={sale} />}
+        {format === "thermal" ? (
+          <ThermalReceipt sale={sale} businessName={businessName} locationName={locationName} />
+        ) : (
+          <A4Receipt sale={sale} businessName={businessName} locationName={locationName} />
+        )}
       </div>
     </div>
   );
 }
 
-function ThermalReceipt({ sale }: { sale: SaleData }) {
+function ThermalReceipt({
+  sale,
+  businessName,
+  locationName,
+}: {
+  sale: SaleData;
+  businessName: string;
+  locationName: string;
+}) {
   const isSplit = sale.notes?.startsWith("Split Payment:");
   
   return (
@@ -70,14 +181,14 @@ function ThermalReceipt({ sale }: { sale: SaleData }) {
       style={{ width: "302px" }}
     >
       <div className="text-center">
-        <div className="font-bold text-base">MauzoChap</div>
-        <div className="text-[10px]">Tanzania</div>
+        <div className="font-bold text-base uppercase">{businessName}</div>
+        <div className="text-[10px] uppercase">{locationName}</div>
         <div className="text-[10px] mt-1">--------------------------------</div>
       </div>
       <div className="my-2 text-[11px]">
         <div>Receipt: {sale.receipt_number}</div>
         <div>{formatDate(sale.created_at)}</div>
-        {!isSplit && <div>Payment: {sale.payment_method}</div>}
+        {!isSplit && <div className="capitalize">Payment: {sale.payment_method.replace("_", " ")}</div>}
       </div>
       <div className="text-[10px]">--------------------------------</div>
       {sale.items.map((i) => (
@@ -118,6 +229,13 @@ function ThermalReceipt({ sale }: { sale: SaleData }) {
         <span>{formatTZS(sale.amount_paid)}</span>
       </div>
       
+      {sale.amount_paid < sale.total && (
+        <div className="flex justify-between mt-1">
+          <span>Balance Due</span>
+          <span>{formatTZS(sale.total - sale.amount_paid)}</span>
+        </div>
+      )}
+      
       {isSplit && (
         <div className="mt-2 text-[10px] bg-gray-100 p-1.5 rounded">
           {sale.notes}
@@ -133,90 +251,174 @@ function ThermalReceipt({ sale }: { sale: SaleData }) {
   );
 }
 
-function A4Receipt({ sale }: { sale: SaleData }) {
+function A4Receipt({
+  sale,
+  businessName,
+  locationName,
+}: {
+  sale: SaleData;
+  businessName: string;
+  locationName: string;
+}) {
   const isSplit = sale.notes?.startsWith("Split Payment:");
-  
+
   return (
     <div
-      className="print-area bg-white text-black p-12 shadow-[var(--shadow-elevated)] rounded"
+      className="print-area bg-white text-black p-12 shadow-[0_16px_40px_rgba(0,0,0,0.04)] border border-gray-100 rounded-xl print:border-none print:shadow-none print:p-0 flex flex-col justify-between"
       style={{ width: "210mm", minHeight: "297mm" }}
     >
-      <div className="flex justify-between items-start border-b-2 border-black pb-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">MauzoChap</h2>
-          <p className="text-sm text-gray-600 mt-1">Business Receipt · Tanzania</p>
+      <div>
+        {/* Header Section */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 capitalize">
+              {businessName}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5 font-medium">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-primary/20 border border-primary print:hidden"></span>
+              {locationName}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-semibold text-primary uppercase tracking-wider print:text-black">
+              Invoice Receipt
+            </div>
+            <div className="text-2xl font-bold text-gray-800 mt-0.5">
+              #{sale.receipt_number}
+            </div>
+            <div className="text-sm text-gray-400 mt-1">
+              {formatDate(sale.created_at)}
+            </div>
+          </div>
         </div>
-        <div className="text-right">
-          <div className="text-xs text-gray-500 uppercase tracking-widest">Invoice</div>
-          <div className="text-2xl font-bold">{sale.receipt_number}</div>
-          <div className="text-sm text-gray-600 mt-1">{formatDate(sale.created_at)}</div>
-        </div>
-      </div>
 
-      <table className="w-full mt-8 text-sm">
-        <thead>
-          <tr className="border-b border-gray-300 text-left">
-            <th className="py-2">Item</th>
-            <th className="py-2 text-right">Qty</th>
-            <th className="py-2 text-right">Price</th>
-            <th className="py-2 text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sale.items.map((i) => (
-            <tr key={i.id} className="border-b border-gray-100">
-              <td className="py-3">{i.name}</td>
-              <td className="py-3 text-right">{i.qty}</td>
-              <td className="py-3 text-right">{formatTZS(i.price)}</td>
-              <td className="py-3 text-right font-medium">{formatTZS(i.qty * i.price)}</td>
+        {/* Dynamic Theme Divider */}
+        <div className="h-1 bg-gradient-to-r from-primary to-primary-glow print:bg-black w-full my-6 rounded-full" />
+
+        {/* Invoice details */}
+        <div className="grid grid-cols-2 gap-8 my-6 text-sm">
+          <div>
+            <span className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Billed To</span>
+            <div className="font-semibold text-gray-800 mt-1">Walk-in Customer</div>
+            <div className="text-gray-500 text-xs">MauzoChap Store Transaction</div>
+          </div>
+          <div className="text-right">
+            <span className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Payment Status</span>
+            <div className="mt-1">
+              <span className="inline-flex rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider print:border print:border-black print:text-black">
+                Paid
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Section */}
+        <table className="w-full mt-10 text-sm">
+          <thead>
+            <tr className="border-b border-gray-300 text-left bg-muted/20 print:bg-gray-50">
+              <th className="py-3 px-4 font-semibold text-gray-600 rounded-l-lg">Item Name</th>
+              <th className="py-3 px-4 text-right font-semibold text-gray-600">Qty</th>
+              <th className="py-3 px-4 text-right font-semibold text-gray-600">Price</th>
+              <th className="py-3 px-4 text-right font-semibold text-gray-600 rounded-r-lg">Total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="mt-8 ml-auto w-72 text-sm space-y-2">
-        <div className="flex justify-between">
-          <span className="text-gray-600">Subtotal</span>
-          <span>{formatTZS(sale.subtotal)}</span>
-        </div>
-        {sale.discount > 0 && (
-          <div className="flex justify-between">
-            <span className="text-gray-600">Discount</span>
-            <span>-{formatTZS(sale.discount)}</span>
-          </div>
-        )}
-        {sale.tax > 0 && (
-          <div className="flex justify-between">
-            <span className="text-gray-600">Tax</span>
-            <span>{formatTZS(sale.tax)}</span>
-          </div>
-        )}
-        <div className="flex justify-between text-lg font-bold pt-2 border-t border-black">
-          <span>Total</span>
-          <span>{formatTZS(sale.total)}</span>
-        </div>
-        
-        {isSplit ? (
-          <div className="pt-2">
-            <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Payment Details</div>
-            <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
-              {sale.notes}
-            </div>
-            <div className="flex justify-between mt-2 font-medium">
-              <span>Total Paid</span>
-              <span>{formatTZS(sale.amount_paid)}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex justify-between text-gray-600 pt-2">
-            <span>Paid via {sale.payment_method}</span>
-            <span>{formatTZS(sale.amount_paid)}</span>
-          </div>
-        )}
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {sale.items.map((i) => (
+              <tr key={i.id} className="hover:bg-muted/5 transition-colors">
+                <td className="py-4 px-4 text-gray-800 font-medium">{i.name}</td>
+                <td className="py-4 px-4 text-right text-gray-700">{i.qty}</td>
+                <td className="py-4 px-4 text-right text-gray-700">
+                  {formatTZS(i.price)}
+                </td>
+                <td className="py-4 px-4 text-right font-semibold text-gray-900">
+                  {formatTZS(i.qty * i.price)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <div className="mt-16 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
-        Thank you for your business · Asante kwa ununuzi wako
+      {/* Totals Summary */}
+      <div className="mt-12 flex justify-between items-start gap-12">
+        <div className="flex-1 max-w-sm text-xs text-gray-400 leading-relaxed print:hidden">
+          <p className="font-semibold text-gray-500 uppercase tracking-wider mb-1">Receipt Notes</p>
+          This document serves as an official proof of payment. For any questions regarding this receipt, please contact the vendor directly.
+        </div>
+        <div className="w-80 text-sm space-y-3 bg-muted/10 print:bg-transparent p-6 rounded-xl border border-gray-100 print:border-none print:p-0">
+          <div className="flex justify-between text-gray-600">
+            <span>Subtotal</span>
+            <span className="font-semibold text-gray-900">
+              {formatTZS(sale.subtotal)}
+            </span>
+          </div>
+          {sale.discount > 0 && (
+            <div className="flex justify-between text-destructive font-medium">
+              <span>Discount</span>
+              <span>-{formatTZS(sale.discount)}</span>
+            </div>
+          )}
+          {sale.tax > 0 && (
+            <div className="flex justify-between text-gray-600">
+              <span>Tax</span>
+              <span className="font-semibold text-gray-900">
+                {formatTZS(sale.tax)}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg font-bold pt-3 border-t border-gray-200 text-gray-950">
+            <span>Total</span>
+            <span className="text-primary print:text-black">
+              {formatTZS(sale.total)}
+            </span>
+          </div>
+
+          {isSplit ? (
+            <div className="pt-3 border-t border-gray-100 mt-2 space-y-2">
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Split Payments
+              </div>
+              <div className="text-xs text-gray-600 bg-white p-2.5 rounded border border-gray-100 leading-normal print:bg-transparent">
+                {sale.notes}
+              </div>
+              <div className="flex justify-between font-bold text-gray-900 mt-2">
+                <span>Total Paid</span>
+                <span>{formatTZS(sale.amount_paid)}</span>
+              </div>
+              {sale.amount_paid < sale.total && (
+                <div className="flex justify-between font-bold text-destructive">
+                  <span>Balance Due</span>
+                  <span>{formatTZS(sale.total - sale.amount_paid)}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="pt-3 border-t border-gray-100 mt-2 space-y-2.5">
+              <div className="flex justify-between text-gray-600">
+                <span className="capitalize">
+                  Paid via {sale.payment_method.replace("_", " ")}
+                </span>
+                <span className="font-bold text-gray-900">
+                  {formatTZS(sale.amount_paid)}
+                </span>
+              </div>
+              {sale.amount_paid < sale.total && (
+                <div className="flex justify-between font-bold text-destructive">
+                  <span>Balance Due</span>
+                  <span>{formatTZS(sale.total - sale.amount_paid)}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer Info */}
+      <div className="mt-16 pt-6 border-t border-gray-200 text-center text-xs text-gray-400 space-y-1">
+        <div className="font-semibold text-gray-500">
+          Thank you! Asante!
+        </div>
+        <div>Powered by MauzoChap</div>
       </div>
     </div>
   );
