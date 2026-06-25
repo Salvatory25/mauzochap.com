@@ -59,6 +59,20 @@ function SuperAdminDashboard() {
     }
   };
 
+  const handleDeleteBusiness = async (id: string, name: string) => {
+    if (!window.confirm(`WARNING: Are you sure you want to permanently delete the business "${name}" and all of its data? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      const { error } = await supabase.from("businesses").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Business permanently deleted");
+      qc.invalidateQueries({ queryKey: ["super-admin-businesses"] });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete business");
+    }
+  };
+
   const handleApprovePayment = async (paymentId: string, businessId: string, pkg: string) => {
     try {
       // 1. Mark payment as paid
@@ -169,13 +183,16 @@ function SuperAdminDashboard() {
                     </span>
                   </td>
                   <td className="px-4 py-3 capitalize">{b.package}</td>
-                  <td className="px-4 py-3 text-right space-x-1">
+                  <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
                     {b.account_status !== "approved" && (
                       <Button size="sm" variant="outline" onClick={() => handleUpdateBusinessStatus(b.id, "approved")}>Approve</Button>
                     )}
                     {b.account_status !== "suspended" && (
-                      <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" onClick={() => handleUpdateBusinessStatus(b.id, "suspended")}>Suspend</Button>
+                      <Button size="sm" variant="outline" className="text-amber-600 hover:text-amber-700 hover:bg-amber-500/10" onClick={() => handleUpdateBusinessStatus(b.id, "suspended")}>Suspend</Button>
                     )}
+                    <Button size="sm" variant="outline" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBusiness(b.id, b.business_name)}>
+                      Delete
+                    </Button>
                   </td>
                 </tr>
               ))}
