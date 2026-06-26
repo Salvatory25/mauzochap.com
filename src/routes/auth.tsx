@@ -126,7 +126,7 @@ function AuthPage() {
         style={{ background: "var(--sidebar)" }}
       >
         <Link to="/" className="flex items-center gap-2 mb-8">
-          <img src={logo} alt="MauzoChap" className="h-12 w-auto" />
+          <img src={logo} alt="MauzoChap" className="h-20 w-auto object-contain bg-white rounded-2xl shadow-sm p-2" />
         </Link>
         <div>
           <h2 className="text-3xl font-bold leading-tight">
@@ -145,7 +145,7 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
           <Link to="/" className="lg:hidden flex items-center gap-2 mb-6">
-            <img src={logo} alt="MauzoChap" className="h-10 w-auto" />
+            <img src={logo} alt="MauzoChap" className="h-12 w-auto object-contain bg-white rounded-xl shadow-sm p-1.5" />
           </Link>
           <h1 className="text-2xl font-bold">
             {mode === "signin" ? t("signIn") : mode === "signup" ? (inviteId && inviteBusinessName ? "Join Store" : t("signUp")) : "Reset Password"}
