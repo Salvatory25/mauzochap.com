@@ -28,6 +28,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/use-auth";
 import { useLang, useT } from "@/lib/i18n";
+import logo from "@/assets/logo.png";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 
@@ -167,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm">
         <div className="px-6 py-5 border-b border-sidebar-border flex flex-col gap-1">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <img src="/logo.png" alt="MauzoChap" className="h-10 w-auto" />
+            <img src={logo} alt="MauzoChap" className="h-10 w-auto" />
           </Link>
           {business && !isSuperAdmin && (
             <div className="mt-2">
@@ -265,7 +266,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-sidebar text-sidebar-foreground px-4 py-3 border-b border-sidebar-border shadow-sm">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <img src="/logo.png" alt="MauzoChap" className="h-8 w-auto" />
+          <img src={logo} alt="MauzoChap" className="h-8 w-auto" />
         </Link>
         <button
           onClick={() => setLang(lang === "en" ? "sw" : "en")}
