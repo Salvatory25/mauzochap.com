@@ -120,31 +120,32 @@ function AuthPage() {
       className="grid min-h-screen lg:grid-cols-2"
       style={{ background: "var(--gradient-subtle)" }}
     >
-      <div
-        className="hidden lg:flex flex-col justify-between p-12 text-sidebar-foreground"
-        style={{ background: "var(--sidebar)" }}
-      >
-        <Link to="/" className="flex items-center gap-2 mb-8 -ml-6">
-          <img src="/logo.png" alt="MauzoChap" className="w-[320px] h-auto object-contain scale-110 origin-left" />
-        </Link>
-        <div>
-          <h2 className="text-3xl font-bold leading-tight">
-            Sell faster.
-            <br />
-            Grow smarter.
+      <div className="hidden lg:flex flex-col justify-center items-center p-12 relative overflow-hidden bg-white border-r border-border">
+        {/* Subtle, premium gradient background matching the brand colors */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-green-50/50" />
+        
+        <div className="relative z-10 flex flex-col items-center text-center max-w-lg">
+          <Link to="/" className="mb-12 transition-transform hover:scale-105 duration-300">
+            <img src="/logo.png" alt="MauzoChap" className="w-[400px] max-w-full h-auto object-contain" />
+          </Link>
+          
+          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
+            The intelligent way to run your business.
           </h2>
-          <p className="mt-3 max-w-sm text-sidebar-foreground/70">
-            POS, inventory, customers, expenses and reports — designed for the way Tanzanian
-            businesses work.
+          <p className="mt-5 text-lg text-slate-600 leading-relaxed font-medium">
+            A complete ecosystem for POS, inventory, customers, and analytics—built exclusively for modern Tanzanian enterprises.
           </p>
         </div>
-        <p className="text-xs text-sidebar-foreground/50">© MauzoChap</p>
+        
+        <p className="absolute bottom-8 text-sm text-slate-400 font-semibold tracking-wide">
+          © {new Date().getFullYear()} MauzoChap. All rights reserved.
+        </p>
       </div>
 
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
-          <Link to="/" className="lg:hidden flex items-center justify-center gap-2 mb-8">
-            <img src="/logo.png" alt="MauzoChap" className="w-[260px] h-auto object-contain scale-125" />
+          <Link to="/" className="lg:hidden flex items-center justify-center gap-2 mb-10">
+            <img src="/logo.png" alt="MauzoChap" className="w-[280px] max-w-full h-auto object-contain" />
           </Link>
           <h1 className="text-2xl font-bold">
             {mode === "signin" ? t("signIn") : mode === "signup" ? (inviteId && inviteBusinessName ? "Join Store" : t("signUp")) : "Reset Password"}
