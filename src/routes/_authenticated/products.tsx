@@ -29,7 +29,6 @@ const productSchema = z.object({
   barcode: z.string().optional().nullable(),
   category_id: z.string().optional().nullable(),
   unit: z.string().optional(),
-  image_url: z.string().url("Invalid image URL").optional().or(z.literal("")),
 });
 
 export const Route = createFileRoute("/_authenticated/products")({
@@ -47,7 +46,6 @@ type Product = {
   low_stock_threshold: number;
   category_id: string | null;
   unit: string | null;
-  image_url: string | null;
 };
 
 type Category = {
@@ -169,10 +167,9 @@ function ProductsPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left w-12"></th>
               <th className="px-4 py-3 text-left">{t("productName")}</th>
               <th className="px-4 py-3 text-left">{t("category")}</th>
-              <th className="px-4 py-3 text-left">Product Code / Barcode</th>
+              <th className="px-4 py-3 text-left">Barcode</th>
               <th className="px-4 py-3 text-right">{t("price")}</th>
               <th className="px-4 py-3 text-right">{t("stock")}</th>
               <th className="px-4 py-3"></th>
@@ -181,33 +178,23 @@ function ProductsPage() {
           <tbody className="divide-y divide-border">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
                   {t("loading")}
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
                   {t("noData")}
                 </td>
               </tr>
             ) : (
               paginated.map((p) => (
                 <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex items-center justify-center border border-border">
-                      {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageIcon className="h-4 w-4 text-muted-foreground opacity-50" />
-                      )}
-                    </div>
-                  </td>
                   <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{(p.categories as any)?.name ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
-                    <div>{p.sku || "—"}</div>
-                    {p.barcode && <div className="text-[10px] text-muted-foreground mt-0.5">{p.barcode}</div>}
+                    {p.barcode || "—"}
                   </td>
                   <td className="px-4 py-3 text-right">{formatTZS(Number(p.price))}</td>
                   <td className="px-4 py-3 text-right">
@@ -273,13 +260,12 @@ function ProductDialog({ editing, onClose }: { editing: Product | null; onClose:
     name: editing?.name ?? "",
     sku: editing?.sku ?? "",
     barcode: editing?.barcode ?? "",
-    price: editing?.price ?? 0,
-    cost: editing?.cost ?? 0,
-    stock_quantity: editing?.stock_quantity ?? 0,
-    low_stock_threshold: editing?.low_stock_threshold ?? 5,
+    price: editing?.price ?? "",
+    cost: editing?.cost ?? "",
+    stock_quantity: editing?.stock_quantity ?? "",
+    low_stock_threshold: editing?.low_stock_threshold ?? "",
     category_id: editing?.category_id ?? "",
     unit: editing?.unit ?? "pcs",
-    image_url: editing?.image_url ?? "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -305,7 +291,6 @@ function ProductDialog({ editing, onClose }: { editing: Product | null; onClose:
         barcode: form.barcode || null,
         category_id: form.category_id || null,
         unit: form.unit || "pcs",
-        image_url: form.image_url || null,
       };
 
       const parsed = productSchema.safeParse({ ...payload, stock_quantity: Number(form.stock_quantity) });
@@ -390,35 +375,11 @@ function ProductDialog({ editing, onClose }: { editing: Product | null; onClose:
               </div>
             </div>
           </div>
-
-          <div className="space-y-3">
-            <div>
-              <Label>Image URL</Label>
-              <Input 
-                value={form.image_url} 
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })} 
-                placeholder="https://..."
-              />
-            </div>
-            <div className="h-24 rounded-md border border-dashed border-border bg-muted flex items-center justify-center overflow-hidden">
-              {form.image_url ? (
-                <img src={form.image_url} alt="Preview" className="h-full w-full object-cover" />
-              ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground opacity-50" />
-              )}
-            </div>
-          </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border">
-          <div>
-            <Label>Product Code</Label>
-            <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-          </div>
-          <div className="sm:col-span-3">
-            <Label>Barcode</Label>
-            <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
-          </div>
+        <div className="pt-2 border-t border-border">
+          <Label>Barcode</Label>
+          <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -428,7 +389,7 @@ function ProductDialog({ editing, onClose }: { editing: Product | null; onClose:
               type="number"
               step="0.01"
               value={form.price}
-              onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
               required
             />
           </div>
@@ -438,7 +399,7 @@ function ProductDialog({ editing, onClose }: { editing: Product | null; onClose:
               type="number"
               step="0.01"
               value={form.cost}
-              onChange={(e) => setForm({ ...form, cost: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, cost: e.target.value })}
             />
           </div>
         </div>
@@ -449,7 +410,7 @@ function ProductDialog({ editing, onClose }: { editing: Product | null; onClose:
             <Input
               type="number"
               value={form.stock_quantity}
-              onChange={(e) => setForm({ ...form, stock_quantity: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
               disabled={!!editing}
             />
             {!!editing && <p className="text-[10px] text-muted-foreground mt-1">Use Inventory to adjust stock.</p>}
@@ -459,7 +420,7 @@ function ProductDialog({ editing, onClose }: { editing: Product | null; onClose:
             <Input
               type="number"
               value={form.low_stock_threshold}
-              onChange={(e) => setForm({ ...form, low_stock_threshold: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, low_stock_threshold: e.target.value })}
             />
           </div>
         </div>
@@ -567,8 +528,8 @@ function BulkImportDialog({ onClose }: { onClose: () => void }) {
   const [results, setResults] = useState<{ success: number; errors: string[] } | null>(null);
 
   const handleDownloadTemplate = () => {
-    const headers = ["Name", "Category", "Product Code", "Barcode", "Price", "Cost", "Stock", "Low Stock Alert", "Unit"];
-    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\nExample Product,Electronics,SKU123,123456789,15000,10000,50,5,pcs";
+    const headers = ["Name", "Category", "Barcode", "Price", "Cost", "Stock", "Low Stock Alert", "Unit"];
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\nExample Product,Electronics,123456789,15000,10000,50,5,pcs";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -628,7 +589,6 @@ function BulkImportDialog({ onClose }: { onClose: () => void }) {
               name,
               price,
               cost: parseFloat(row["Cost"]) || 0,
-              sku: row["Product Code"]?.trim() || null,
               barcode: row["Barcode"]?.trim() || null,
               category_id: catId,
               stock_quantity: parseInt(row["Stock"]) || 0,
