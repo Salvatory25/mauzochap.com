@@ -82,7 +82,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "MauzoChap" },
       { property: "og:description", content: "POS & Business Management for African SMEs." },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", href: "/logo.png" }
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
