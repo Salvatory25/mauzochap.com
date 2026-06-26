@@ -120,24 +120,24 @@ function AuthPage() {
       className="grid min-h-screen lg:grid-cols-2"
       style={{ background: "var(--gradient-subtle)" }}
     >
-      <div className="hidden lg:flex flex-col justify-center items-center p-12 relative overflow-hidden bg-white border-r border-border">
-        {/* Subtle, premium gradient background matching the brand colors */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-green-50/50" />
-        
+      <div 
+        className="hidden lg:flex flex-col justify-center items-center p-12 relative overflow-hidden text-sidebar-foreground"
+        style={{ background: "var(--sidebar)" }}
+      >
         <div className="relative z-10 flex flex-col items-center text-center max-w-lg">
-          <Link to="/" className="mb-12 transition-transform hover:scale-105 duration-300">
-            <img src="/logo.png" alt="MauzoChap" className="w-[400px] max-w-full h-auto object-contain" />
+          <Link to="/" className="mb-12 transition-transform hover:scale-105 duration-300 bg-white p-6 rounded-3xl shadow-xl">
+            <img src="/logo.png" alt="MauzoChap" className="w-[340px] max-w-full h-auto object-contain" />
           </Link>
           
-          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
+          <h2 className="text-4xl font-extrabold tracking-tight leading-[1.15]">
             The intelligent way to run your business.
           </h2>
-          <p className="mt-5 text-lg text-slate-600 leading-relaxed font-medium">
+          <p className="mt-5 text-lg text-sidebar-foreground/80 leading-relaxed font-medium">
             A complete ecosystem for POS, inventory, customers, and analytics—built exclusively for modern Tanzanian enterprises.
           </p>
         </div>
         
-        <p className="absolute bottom-8 text-sm text-slate-400 font-semibold tracking-wide">
+        <p className="absolute bottom-8 text-sm text-sidebar-foreground/50 font-semibold tracking-wide">
           © {new Date().getFullYear()} MauzoChap. All rights reserved.
         </p>
       </div>
