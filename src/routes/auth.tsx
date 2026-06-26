@@ -125,7 +125,7 @@ function AuthPage() {
         style={{ background: "var(--sidebar)" }}
       >
         <div className="relative z-10 flex flex-col items-center text-center max-w-lg">
-          <Link to="/" className="mb-12 transition-transform hover:scale-105 duration-300 bg-white p-6 rounded-3xl shadow-xl">
+          <Link to="/" className="mb-12 transition-transform hover:scale-105 duration-300">
             <img src="/logo.png" alt="MauzoChap" className="w-[340px] max-w-full h-auto object-contain" />
           </Link>
           
