@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Search, Tags, Image as ImageIcon, FileUp, Download, CheckCircle2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Tags, FileUp, Download, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { z } from "zod";
