@@ -167,10 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm">
         <div className="px-6 py-5 border-b border-sidebar-border flex flex-col gap-1">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-bold shadow-md">
-              M
-            </div>
-            <span className="text-lg font-bold tracking-tight">MauzoChap</span>
+            <img src="/logo.png" alt="MauzoChap" className="h-10 w-auto" />
           </Link>
           {business && !isSuperAdmin && (
             <div className="mt-2">
@@ -268,10 +265,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-sidebar text-sidebar-foreground px-4 py-3 border-b border-sidebar-border shadow-sm">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
-            M
-          </div>
-          <span className="font-semibold tracking-tight">MauzoChap</span>
+          <img src="/logo.png" alt="MauzoChap" className="h-8 w-auto" />
         </Link>
         <button
           onClick={() => setLang(lang === "en" ? "sw" : "en")}

@@ -124,11 +124,8 @@ function AuthPage() {
         className="hidden lg:flex flex-col justify-between p-12 text-sidebar-foreground"
         style={{ background: "var(--sidebar)" }}
       >
-        <Link to="/" className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">
-            M
-          </div>
-          <span className="text-lg font-semibold">MauzoChap</span>
+        <Link to="/" className="flex items-center gap-2 mb-8">
+          <img src="/logo.png" alt="MauzoChap" className="h-12 w-auto" />
         </Link>
         <div>
           <h2 className="text-3xl font-bold leading-tight">
@@ -147,10 +144,7 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
           <Link to="/" className="lg:hidden flex items-center gap-2 mb-6">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">
-              M
-            </div>
-            <span className="text-lg font-semibold">MauzoChap</span>
+            <img src="/logo.png" alt="MauzoChap" className="h-10 w-auto" />
           </Link>
           <h1 className="text-2xl font-bold">
             {mode === "signin" ? t("signIn") : mode === "signup" ? (inviteId && inviteBusinessName ? "Join Store" : t("signUp")) : "Reset Password"}
