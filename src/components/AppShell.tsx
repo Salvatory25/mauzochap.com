@@ -64,7 +64,7 @@ function Blocker({ title, message, icon: Icon, action }: { title: string, messag
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT();
   const [lang, setLang] = useLang();
-  const { user, roles, business, isSuperAdmin, isAdmin, isManager, loading } = useAuth();
+
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
