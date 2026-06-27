@@ -263,19 +263,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-sidebar text-sidebar-foreground px-4 py-3 border-b border-sidebar-border shadow-sm">
-        <Link to="/dashboard" className="flex items-center gap-2 -ml-2">
-          <img src="/logo.png" alt="MauzoChap" className="w-[180px] h-auto object-contain scale-110 origin-left" />
+      <div className="lg:hidden fixed top-0 inset-x-0 z-40 h-20 flex items-center justify-between bg-sidebar text-sidebar-foreground px-4 border-b border-sidebar-border shadow-sm">
+        <Link to="/dashboard" className="flex items-center gap-2 -ml-2 h-full py-2">
+          <img src="/logo.png" alt="MauzoChap" className="w-[180px] h-full object-contain scale-[1.15] origin-left" />
         </Link>
         <button
           onClick={() => setLang(lang === "en" ? "sw" : "en")}
-          className="text-xs font-bold uppercase tracking-wider bg-sidebar-accent px-2 py-1 rounded"
+          className="text-xs font-bold uppercase tracking-wider bg-sidebar-accent px-3 py-2 rounded-md"
         >
           {lang}
         </button>
       </div>
 
-      <main className="flex-1 lg:ml-0 pt-14 lg:pt-0 bg-muted/20">
+      <main className="flex-1 lg:ml-0 pt-20 lg:pt-0 bg-muted/20">
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
         {/* Mobile bottom nav */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 grid grid-cols-5 gap-1 border-t border-border bg-card p-2 z-40 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
