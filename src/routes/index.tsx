@@ -209,7 +209,7 @@ function Landing() {
 
       {/* Floating WhatsApp Icon */}
       <a
-        href="https://wa.me/255627274168"
+        href="https://wa.me/255627274168?text=Habari%20MauzoChap!%20Ningependa%20kupata%20maelezo%20zaidi%20kuhusu%20mfumo%20wenu%20wa%20POS%20na%20jinsi%20ya%20kuanza."
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-110 transition-transform duration-300"
