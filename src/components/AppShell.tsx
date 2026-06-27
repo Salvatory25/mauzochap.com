@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Boxes,
@@ -18,7 +19,14 @@ import {
   FileText,
   MapPin,
   ChevronDown,
+  Menu,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +72,7 @@ function Blocker({ title, message, icon: Icon, action }: { title: string, messag
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT();
   const [lang, setLang] = useLang();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -162,104 +171,111 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     navigate({ to: "/auth", replace: true });
   };
 
+  const sidebarContent = (
+    <>
+      <div className="px-6 py-5 border-b border-sidebar-border flex flex-col gap-1 shrink-0">
+        <Link to="/dashboard" className="flex items-center gap-2 -ml-2" onClick={() => setMobileMenuOpen(false)}>
+          <img src="/logo.png" alt="MauzoChap" className="w-[220px] h-auto object-contain" />
+        </Link>
+        {business && !isSuperAdmin && (
+          <div className="mt-2">
+            {isAdmin && availableBranches && availableBranches.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between px-2 py-1 h-auto font-normal text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-sidebar-border/50 bg-sidebar-accent/20">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <div className="flex flex-col items-start truncate">
+                        <span className="text-xs font-bold truncate w-full">{business.business_name}</span>
+                        <span className="text-[10px] text-muted-foreground truncate w-full">
+                          {availableBranches.find(b => b.id === branchId)?.name || 'Select Location'}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[220px]">
+                  {availableBranches.map((b) => (
+                    <DropdownMenuItem 
+                      key={b.id} 
+                      onClick={() => { switchBranch(b.id); setMobileMenuOpen(false); }}
+                      className={b.id === branchId ? "bg-primary/10 font-bold" : ""}
+                    >
+                      {b.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex flex-col px-1">
+                <span className="text-xs font-bold text-sidebar-foreground truncate">{business.business_name}</span>
+                <span className="text-[10px] text-sidebar-foreground/60 truncate flex items-center gap-1 mt-0.5">
+                  <MapPin className="h-3 w-3" />
+                  {availableBranches?.find(b => b.id === branchId)?.name || 'Default Location'}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {nav.map((item) => {
+          const active = location.pathname.startsWith(item.to);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                active
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-sidebar-border p-4 space-y-3 bg-sidebar/50 shrink-0">
+        <div className="text-xs text-sidebar-foreground/80 truncate font-medium">{user?.email}</div>
+        <div className="flex flex-wrap gap-1">
+          {roles.map((r) => (
+            <span
+              key={r}
+              className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-primary/20"
+            >
+              {r}
+            </span>
+          ))}
+        </div>
+        <button
+          onClick={() => setLang(lang === "en" ? "sw" : "en")}
+          className="flex w-full items-center gap-2 rounded-md border border-sidebar-border px-3 py-2 text-sm hover:bg-sidebar-accent transition-colors"
+        >
+          <Languages className="h-4 w-4" />
+          {lang === "en" ? "English" : "Kiswahili"}
+          <span className="ml-auto text-xs text-sidebar-foreground/50">↔</span>
+        </button>
+        <button
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          {t("signOut")}
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm">
-        <div className="px-6 py-5 border-b border-sidebar-border flex flex-col gap-1">
-          <Link to="/dashboard" className="flex items-center gap-2 -ml-2">
-            <img src="/logo.png" alt="MauzoChap" className="w-[220px] h-auto object-contain" />
-          </Link>
-          {business && !isSuperAdmin && (
-            <div className="mt-2">
-              {isAdmin && availableBranches && availableBranches.length > 0 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="w-full justify-between px-2 py-1 h-auto font-normal text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-sidebar-border/50 bg-sidebar-accent/20">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-                        <div className="flex flex-col items-start truncate">
-                          <span className="text-xs font-bold truncate w-full">{business.business_name}</span>
-                          <span className="text-[10px] text-muted-foreground truncate w-full">
-                            {availableBranches.find(b => b.id === branchId)?.name || 'Select Location'}
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[220px]">
-                    {availableBranches.map((b) => (
-                      <DropdownMenuItem 
-                        key={b.id} 
-                        onClick={() => switchBranch(b.id)}
-                        className={b.id === branchId ? "bg-primary/10 font-bold" : ""}
-                      >
-                        {b.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex flex-col px-1">
-                  <span className="text-xs font-bold text-sidebar-foreground truncate">{business.business_name}</span>
-                  <span className="text-[10px] text-sidebar-foreground/60 truncate flex items-center gap-1 mt-0.5">
-                    <MapPin className="h-3 w-3" />
-                    {availableBranches?.find(b => b.id === branchId)?.name || 'Default Location'}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {nav.map((item) => {
-            const active = location.pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-sidebar-border p-4 space-y-3 bg-sidebar/50">
-          <div className="text-xs text-sidebar-foreground/80 truncate font-medium">{user?.email}</div>
-          <div className="flex flex-wrap gap-1">
-            {roles.map((r) => (
-              <span
-                key={r}
-                className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-primary/20"
-              >
-                {r}
-              </span>
-            ))}
-          </div>
-          <button
-            onClick={() => setLang(lang === "en" ? "sw" : "en")}
-            className="flex w-full items-center gap-2 rounded-md border border-sidebar-border px-3 py-2 text-sm hover:bg-sidebar-accent transition-colors"
-          >
-            <Languages className="h-4 w-4" />
-            {lang === "en" ? "English" : "Kiswahili"}
-            <span className="ml-auto text-xs text-sidebar-foreground/50">↔</span>
-          </button>
-          <button
-            onClick={handleSignOut}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            {t("signOut")}
-          </button>
-        </div>
+      <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm h-screen sticky top-0 overflow-hidden">
+        {sidebarContent}
       </aside>
 
       {/* Mobile top bar */}
@@ -267,12 +283,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link to="/dashboard" className="flex items-center gap-2 -ml-2 h-full py-2">
           <img src="/logo.png" alt="MauzoChap" className="w-[180px] h-full object-contain scale-[1.15] origin-left" />
         </Link>
-        <button
-          onClick={() => setLang(lang === "en" ? "sw" : "en")}
-          className="text-xs font-bold uppercase tracking-wider bg-sidebar-accent px-3 py-2 rounded-md"
-        >
-          {lang}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLang(lang === "en" ? "sw" : "en")}
+            className="text-xs font-bold uppercase tracking-wider bg-sidebar-accent px-3 py-2 rounded-md"
+          >
+            {lang}
+          </button>
+          
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <button className="p-2 -mr-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md">
+                <Menu className="h-6 w-6" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[280px] p-0 bg-sidebar text-sidebar-foreground border-r-sidebar-border flex flex-col">
+              <SheetTitle className="sr-only">Menu</SheetTitle>
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       <main className="flex-1 lg:ml-0 pt-20 lg:pt-0 bg-muted/20">
