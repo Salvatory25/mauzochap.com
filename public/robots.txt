@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /pos/
+Disallow: /products/
+Disallow: /inventory/
+Disallow: /sales/
+Disallow: /invoices/
+Disallow: /customers/
+Disallow: /suppliers/
+Disallow: /expenses/
+Disallow: /reports/
+Disallow: /users/
+Disallow: /locations/
+Disallow: /settings/
+Disallow: /super-admin/
+Disallow: /auth/
+
+Sitemap: https://mauzochap.com/sitemap.xml
